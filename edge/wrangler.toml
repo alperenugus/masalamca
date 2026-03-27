@@ -1,0 +1,6 @@
+name = "masal-amca-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-03-01"
+
+[vars]
+# Set real secrets with: wrangler secret put OPENAI_API_KEY

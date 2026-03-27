@@ -8,6 +8,8 @@
 
 /* Begin PBXFileReference section */
 		6964D4BA2F76F76D003E9DEA /* MasalAmca.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MasalAmca.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A64D5012F76F76D003E9DEA /* MasalAmcaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MasalAmcaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A64D5022F76F76D003E9DEA /* MasalAmcaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MasalAmcaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -31,8 +33,39 @@
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
+/* Begin PBXContainerItemProxy section */
+		7A64D50B2F76F76D003E9DEA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6964D4B22F76F76D003E9DEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6964D4B92F76F76D003E9DEA;
+			remoteInfo = MasalAmca;
+		};
+		7A64D50D2F76F76D003E9DEA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6964D4B22F76F76D003E9DEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6964D4B92F76F76D003E9DEA;
+			remoteInfo = MasalAmca;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		6964D4B72F76F76D003E9DEA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7A64D5082F76F76D003E9DEA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7A64D50A2F76F76D003E9DEA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -46,6 +79,8 @@
 			isa = PBXGroup;
 			children = (
 				6964D4BC2F76F76D003E9DEA /* MasalAmca */,
+				7A64D5032F76F76D003E9DEA /* MasalAmcaTests */,
+				7A64D5042F76F76D003E9DEA /* MasalAmcaUITests */,
 				6964D4BB2F76F76D003E9DEA /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,8 +89,20 @@
 			isa = PBXGroup;
 			children = (
 				6964D4BA2F76F76D003E9DEA /* MasalAmca.app */,
+				7A64D5012F76F76D003E9DEA /* MasalAmcaTests.xctest */,
+				7A64D5022F76F76D003E9DEA /* MasalAmcaUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		7A64D5032F76F76D003E9DEA /* MasalAmcaTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MasalAmcaTests;
+			sourceTree = "<group>";
+		};
+		7A64D5042F76F76D003E9DEA /* MasalAmcaUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MasalAmcaUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -83,6 +130,50 @@
 			productReference = 6964D4BA2F76F76D003E9DEA /* MasalAmca.app */;
 			productType = "com.apple.product-type.application";
 		};
+		7A64D5052F76F76D003E9DEA /* MasalAmcaTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7A64D5132F76F76D003E9DEA /* Build configuration list for PBXNativeTarget "MasalAmcaTests" */;
+			buildPhases = (
+				7A64D5072F76F76D003E9DEA /* Sources */,
+				7A64D5082F76F76D003E9DEA /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7A64D50C2F76F76D003E9DEA /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				7A64D5032F76F76D003E9DEA /* MasalAmcaTests */,
+			);
+			name = MasalAmcaTests;
+			packageProductDependencies = (
+			);
+			productName = MasalAmcaTests;
+			productReference = 7A64D5012F76F76D003E9DEA /* MasalAmcaTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		7A64D5062F76F76D003E9DEA /* MasalAmcaUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7A64D5142F76F76D003E9DEA /* Build configuration list for PBXNativeTarget "MasalAmcaUITests" */;
+			buildPhases = (
+				7A64D5092F76F76D003E9DEA /* Sources */,
+				7A64D50A2F76F76D003E9DEA /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7A64D50E2F76F76D003E9DEA /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				7A64D5042F76F76D003E9DEA /* MasalAmcaUITests */,
+			);
+			name = MasalAmcaUITests;
+			packageProductDependencies = (
+			);
+			productName = MasalAmcaUITests;
+			productReference = 7A64D5022F76F76D003E9DEA /* MasalAmcaUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -95,6 +186,14 @@
 				TargetAttributes = {
 					6964D4B92F76F76D003E9DEA = {
 						CreatedOnToolsVersion = 26.0;
+					};
+					7A64D5052F76F76D003E9DEA = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 6964D4B92F76F76D003E9DEA;
+					};
+					7A64D5062F76F76D003E9DEA = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 6964D4B92F76F76D003E9DEA;
 					};
 				};
 			};
@@ -113,6 +212,8 @@
 			projectRoot = "";
 			targets = (
 				6964D4B92F76F76D003E9DEA /* MasalAmca */,
+				7A64D5052F76F76D003E9DEA /* MasalAmcaTests */,
+				7A64D5062F76F76D003E9DEA /* MasalAmcaUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -135,7 +236,34 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7A64D5072F76F76D003E9DEA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7A64D5092F76F76D003E9DEA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7A64D50C2F76F76D003E9DEA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6964D4B92F76F76D003E9DEA /* MasalAmca */;
+			targetProxy = 7A64D50B2F76F76D003E9DEA /* PBXContainerItemProxy */;
+		};
+		7A64D50E2F76F76D003E9DEA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6964D4B92F76F76D003E9DEA /* MasalAmca */;
+			targetProxy = 7A64D50D2F76F76D003E9DEA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		6964D4C92F76F76F003E9DEA /* Debug */ = {
@@ -344,6 +472,96 @@
 			};
 			name = Release;
 		};
+		7A64D50F2F76F76D003E9DEA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AWZ9QWZ2NC;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = alperenugus.MasalAmcaTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MasalAmca.app/MasalAmca";
+			};
+			name = Debug;
+		};
+		7A64D5102F76F76D003E9DEA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AWZ9QWZ2NC;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = alperenugus.MasalAmcaTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MasalAmca.app/MasalAmca";
+			};
+			name = Release;
+		};
+		7A64D5112F76F76D003E9DEA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AWZ9QWZ2NC;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = alperenugus.MasalAmcaUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = MasalAmca;
+			};
+			name = Debug;
+		};
+		7A64D5122F76F76D003E9DEA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AWZ9QWZ2NC;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = alperenugus.MasalAmcaUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = MasalAmca;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -361,6 +579,24 @@
 			buildConfigurations = (
 				6964D4C92F76F76F003E9DEA /* Debug */,
 				6964D4CA2F76F76F003E9DEA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7A64D5132F76F76D003E9DEA /* Build configuration list for PBXNativeTarget "MasalAmcaTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7A64D50F2F76F76D003E9DEA /* Debug */,
+				7A64D5102F76F76D003E9DEA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7A64D5142F76F76D003E9DEA /* Build configuration list for PBXNativeTarget "MasalAmcaUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7A64D5112F76F76D003E9DEA /* Debug */,
+				7A64D5122F76F76D003E9DEA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

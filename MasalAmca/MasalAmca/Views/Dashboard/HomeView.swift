@@ -1,0 +1,327 @@
+//
+//  HomeView.swift
+//  MasalAmca
+//
+
+import SwiftData
+import SwiftUI
+
+struct HomeView: View {
+    @Environment(\.masalThemeManager) private var theme
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.masalChildProfileManager) private var profileManager
+
+    @Bindable var subscription: SubscriptionManager
+    @Bindable var mixer: MixerEngine
+
+    @Query(sort: \Story.createdAt, order: .reverse) private var stories: [Story]
+    @Query private var profiles: [ChildProfile]
+
+    @State private var isGenerating = false
+    @State private var generationError: String?
+    @State private var playerStory: Story?
+    @State private var showPlayer = false
+    @State private var showPaywall = false
+    @State private var storyAudio = AudioPlayerService()
+
+    private let storyService = StoryService()
+
+    var body: some View {
+        let c = theme.colors
+        let active = profileManager.activeProfile(from: profiles)
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxl) {
+                header
+                greeting(name: active?.name ?? "Can")
+                generateButton(profile: active)
+                recentSection(active: active)
+                quickNoise
+                tipCard
+            }
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.bottom, 120)
+        }
+        .scrollIndicators(.hidden)
+        .background(c.surface.ignoresSafeArea())
+        .fullScreenCover(isPresented: $showPlayer, onDismiss: { playerStory = nil }) {
+            if let story = playerStory {
+                StoryPlayerView(
+                    audio: storyAudio,
+                    mixer: mixer,
+                    subscription: subscription,
+                    story: story
+                )
+                .masalThemeManager(theme)
+            }
+        }
+        .alert("Hata", isPresented: Binding(
+            get: { generationError != nil },
+            set: { if !$0 { generationError = nil } }
+        )) {
+            Button("Tamam", role: .cancel) { generationError = nil }
+        } message: {
+            Text(generationError ?? "")
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(subscription: subscription) {
+                showPaywall = false
+            }
+            .presentationDetents([.large])
+        }
+    }
+
+    private var header: some View {
+        let c = theme.colors
+        return HStack {
+            HStack(spacing: 12) {
+                Image(systemName: "person.circle")
+                    .font(.title2)
+                    .foregroundStyle(c.primary)
+                Text("Masal Amca")
+                    .font(MasalFont.titleMedium())
+                    .foregroundStyle(c.primary)
+            }
+            Spacer()
+            Image(systemName: "bell")
+                .font(.title3)
+                .foregroundStyle(c.primary)
+        }
+        .padding(.top, 8)
+    }
+
+    private func greeting(name: String) -> some View {
+        let c = theme.colors
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("İyi Geceler, \(name)")
+                .font(MasalFont.headlineMedium())
+                .foregroundStyle(c.onSurface)
+            Text("Hangi masalla rüyalara dalalım?")
+                .font(MasalFont.bodyLarge())
+                .foregroundStyle(c.onSurfaceVariant.opacity(0.85))
+        }
+    }
+
+    private func generateButton(profile: ChildProfile?) -> some View {
+        let c = theme.colors
+        return Button {
+            Task { await generateStory(profile: profile) }
+        } label: {
+            ZStack {
+                LinearGradient(
+                    colors: [c.primaryContainer, c.primary],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                VStack(spacing: DesignTokens.Spacing.md) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 36))
+                        .foregroundStyle(c.onPrimaryContainer)
+                    Text("BU GECEKİ MASALI ÜRET")
+                        .font(MasalFont.titleMedium())
+                        .foregroundStyle(c.onPrimaryContainer)
+                }
+                .padding(DesignTokens.Spacing.xl)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous))
+            .shadow(color: c.ctaShadow, radius: 20, x: 0, y: 8)
+            .overlay {
+                if isGenerating { ProgressView().tint(c.onPrimaryContainer).scaleEffect(1.2) }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(isGenerating || profile == nil)
+    }
+
+    private func recentSection(active: ChildProfile?) -> some View {
+        let c = theme.colors
+        let recent = stories.filter { $0.profile?.id == active?.id }.prefix(8)
+        return VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            HStack {
+                Text("Son Dinlenenler")
+                    .font(MasalFont.titleMedium())
+                    .foregroundStyle(c.onSurface)
+                Spacer()
+                Button("Tümünü Gör") {}
+                    .font(MasalFont.bodyMedium())
+                    .foregroundStyle(c.primary)
+            }
+            if recent.isEmpty {
+                Text("Henüz masal yok — yukarıdaki düğmeyle ilk masalı üret.")
+                    .font(MasalFont.bodyMedium())
+                    .foregroundStyle(c.secondary.opacity(0.8))
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DesignTokens.Spacing.md) {
+                        ForEach(Array(recent), id: \.persistentModelID) { s in
+                            Button {
+                                playerStory = s
+                                showPlayer = true
+                            } label: {
+                                StoryCard(
+                                    title: s.title,
+                                    subtitle: "\(s.genre.displayName) • Uyku",
+                                    durationMinutes: max(1, s.durationSeconds / 60),
+                                    systemImageName: "moon.stars"
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var quickNoise: some View {
+        let c = theme.colors
+        let quick: [(MixerSound, String, String)] = [
+            (.rain, "Yağmur", "Dinlendirici Ses"),
+            (.fireplace, "Şömine", "Sıcak Atmosfer"),
+            (.ocean, "Okyanus", "Derin Dalgalar")
+        ]
+        return VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+            Text("Hızlı Beyaz Gürültü")
+                .font(MasalFont.titleMedium())
+                .foregroundStyle(c.onSurface)
+            VStack(spacing: DesignTokens.Spacing.sm) {
+                ForEach(quick, id: \.0) { item in
+                    quickNoiseRow(sound: item.0, title: item.1, subtitle: item.2)
+                }
+            }
+        }
+    }
+
+    private func quickNoiseRow(sound: MixerSound, title: String, subtitle: String) -> some View {
+        let c = theme.colors
+        let on = mixer.enabled[sound] ?? false
+        return Button {
+            if !subscription.canUseSound(sound) {
+                showPaywall = true
+                return
+            }
+            mixer.setEnabled(sound, on: !on)
+        } label: {
+            HStack {
+                HStack(spacing: DesignTokens.Spacing.md) {
+                    Circle()
+                        .fill(c.primary.opacity(0.12))
+                        .frame(width: 48, height: 48)
+                        .overlay {
+                            Image(systemName: sound.systemImage)
+                                .foregroundStyle(c.primary)
+                        }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(MasalFont.bodyMedium())
+                            .fontWeight(.bold)
+                            .foregroundStyle(c.onSurface)
+                        Text(subtitle)
+                            .font(MasalFont.labelMedium())
+                            .foregroundStyle(c.onSurfaceVariant.opacity(0.65))
+                    }
+                }
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { mixer.enabled[sound] ?? false },
+                    set: { new in
+                        if new, !subscription.canUseSound(sound) {
+                            showPaywall = true
+                            return
+                        }
+                        mixer.setEnabled(sound, on: new)
+                    }
+                ))
+                .labelsHidden()
+                .tint(c.primary)
+            }
+            .padding(DesignTokens.Spacing.md)
+            .background(c.surfaceContainer)
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var tipCard: some View {
+        let c = theme.colors
+        return HStack(alignment: .top, spacing: DesignTokens.Spacing.lg) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("GÜNÜN İPUCU")
+                    .font(MasalFont.labelSmall())
+                    .foregroundStyle(c.tertiary)
+                Text("Uyku Zamanı Ritüeli")
+                    .font(MasalFont.titleMedium())
+                    .foregroundStyle(c.onSurface)
+                Text("Masaldan 15 dakika önce beyaz gürültü açmak çocukların uykuya geçişini kolaylaştırır.")
+                    .font(MasalFont.bodyMedium())
+                    .foregroundStyle(c.onSurfaceVariant)
+            }
+            Image(systemName: "lightbulb.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(c.primary.opacity(0.35))
+        }
+        .padding(DesignTokens.Spacing.lg)
+        .background(c.surfaceContainerHigh.opacity(0.45))
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous))
+    }
+
+    @MainActor
+    private func generateStory(profile: ChildProfile?) async {
+        guard let profile else { return }
+        guard subscription.canGenerateStory() else {
+            showPaywall = true
+            return
+        }
+        isGenerating = true
+        defer { isGenerating = false }
+
+        do {
+            if AppConfiguration.proxyBaseURL == nil {
+                let demo = Story(
+                    title: "Yıldız Tozu Yolculuğu",
+                    body: "Bir varmış bir yokmuş, \(profile.name) adında cesur bir çocuk varmış. Her gece yıldızlar ona fısıldarmış ve rüyalarına yolculuk etmiş. Bu gece de huzurla uyumuş ve sabaha kadar güzel rüyalar görmüş.",
+                    durationSeconds: 120,
+                    audioFileName: nil,
+                    genre: .calming,
+                    generationModel: "demo-local",
+                    profile: profile
+                )
+                modelContext.insert(demo)
+                subscription.registerStoryGenerated()
+                try modelContext.save()
+                playerStory = demo
+                showPlayer = true
+                return
+            }
+
+            let voice = Bundle.main.object(forInfoDictionaryKey: "ElevenLabsVoiceID") as? String ?? "default"
+            let result = try await storyService.generateStoryAndAudio(
+                profile: profile,
+                voiceID: voice,
+                authToken: AppConfiguration.proxyAuthToken
+            )
+            let genre = StoryGenre(rawValue: result.story.genre) ?? .adventure
+            let story = Story(
+                title: result.story.title,
+                body: result.story.body,
+                durationSeconds: 180,
+                audioFileName: nil,
+                genre: genre,
+                generationModel: result.story.model ?? "unknown",
+                profile: profile
+            )
+            modelContext.insert(story)
+            let fileName = try AudioCacheManager.save(data: result.audioData, storyID: story.id, extension: "mp3")
+            story.audioFileName = fileName
+            subscription.registerStoryGenerated()
+            try modelContext.save()
+            playerStory = story
+            showPlayer = true
+        } catch {
+            generationError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+}

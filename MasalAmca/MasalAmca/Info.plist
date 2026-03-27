@@ -5,6 +5,20 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
+		<string>audio</string>
 	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Resources/Fonts/PlusJakartaSans-VariableFont_wght.ttf</string>
+		<string>Resources/Fonts/Manrope-VariableFont_wght.ttf</string>
+	</array>
+	<key>ProxyBaseURL</key>
+	<string></string>
+	<key>ProxyAuthToken</key>
+	<string></string>
+	<key>ElevenLabsVoiceID</key>
+	<string></string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
