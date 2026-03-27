@@ -13,12 +13,14 @@
 		<string>Resources/Fonts/Manrope-VariableFont_wght.ttf</string>
 	</array>
 	<key>ProxyBaseURL</key>
-	<string></string>
+	<string>https://masal-amca-proxy.masal-amca-proxy.workers.dev</string>
 	<key>ProxyAuthToken</key>
-	<string></string>
+	<string>d8f038d5b21a872197e2b8f8c0780dacc651981e11ef6c68b15cef13ed8a268d</string>
 	<key>ElevenLabsVoiceID</key>
-	<string></string>
+	<string>oPC5I9GKjMReiaM29gjY</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 </dict>
 </plist>

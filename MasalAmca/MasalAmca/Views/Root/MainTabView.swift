@@ -18,7 +18,7 @@ struct MainTabView: View {
             Group {
                 switch tab {
                 case .home:
-                    HomeView(subscription: subscription, mixer: mixer)
+                    HomeView(subscription: subscription, mixer: mixer, tabSelection: $tab)
                 case .library:
                     LibraryView(subscription: subscription, mixer: mixer)
                 case .settings:

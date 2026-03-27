@@ -19,8 +19,7 @@ struct LibraryView: View {
 
     @State private var search = ""
     @State private var filter: LibraryFilter = .all
-    @State private var playerStory: Story?
-    @State private var showPlayer = false
+    @State private var playerPresentation: PresentedStory?
     @State private var storyAudio = AudioPlayerService()
 
     private var df: DateFormatter {
@@ -35,39 +34,130 @@ struct LibraryView: View {
         let c = theme.colors
         let active = profileManager.activeProfile(from: profiles)
         let filtered = filteredStories(active: active)
-        let recent = filtered.prefix(5)
+        let recent = Array(filtered.prefix(5))
         let older = Array(filtered.dropFirst(5))
 
-        ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xl) {
+        List {
+            Section {
                 navBar
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 4, trailing: 0))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 searchAndChips
-                if !recent.isEmpty {
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
+
+            if !recent.isEmpty {
+                Section {
+                    ForEach(recent, id: \.persistentModelID) { s in
+                        storyListRow(s, active: active)
+                    }
+                } header: {
                     sectionTitle("Son Dinlenenler")
-                    storyGroup(Array(recent))
                 }
-                if !older.isEmpty {
+                .listRowSeparator(.hidden)
+            }
+
+            if !older.isEmpty {
+                Section {
+                    ForEach(older, id: \.persistentModelID) { s in
+                        storyListRow(s, active: active)
+                    }
+                } header: {
                     sectionTitle("Eski Masallar")
-                    storyGroup(older)
                 }
-                if filtered.isEmpty {
+                .listRowSeparator(.hidden)
+            }
+
+            if filtered.isEmpty {
+                Section {
                     Text("Masal bulunamadı.")
                         .font(MasalFont.bodyLarge())
                         .foregroundStyle(c.secondary)
-                        .padding(.top, 24)
+                        .listRowBackground(Color.clear)
                 }
+                .listRowSeparator(.hidden)
+            }
+
+            Section {
                 statsBento
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 24, trailing: 0))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
             }
-            .padding(.horizontal, DesignTokens.Spacing.md)
-            .padding(.bottom, 120)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .background(c.surface.ignoresSafeArea())
-        .fullScreenCover(isPresented: $showPlayer, onDismiss: { playerStory = nil }) {
-            if let story = playerStory {
-                StoryPlayerView(audio: storyAudio, mixer: mixer, subscription: subscription, story: story)
-                    .masalThemeManager(theme)
+        .fullScreenCover(item: $playerPresentation, onDismiss: { storyAudio.stop() }) { wrap in
+            StoryPlayerView(
+                audio: storyAudio,
+                mixer: mixer,
+                subscription: subscription,
+                startStory: wrap.startStory,
+                playlist: wrap.playlist
+            )
+            .masalThemeManager(theme)
+        }
+    }
+
+    @ViewBuilder
+    private func storyListRow(_ s: Story, active: ChildProfile?) -> some View {
+        let playlist = playlistForProfile(active: active)
+        Button {
+            playerPresentation = PresentedStory(startStory: s, playlist: playlist)
+        } label: {
+            StoryListRow(
+                title: s.title,
+                durationText: "\(max(1, s.durationSeconds / 60)) dk",
+                dateText: df.string(from: s.createdAt),
+                showCloud: true,
+                systemImageName: "moon.stars",
+                isFavorite: s.isFavorite,
+                onFavoriteToggle: { toggleFavorite(s) }
+            )
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(theme.colors.surfaceContainer)
+        .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12))
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                deleteStory(s)
+            } label: {
+                Label("Sil", systemImage: "trash.fill")
             }
         }
+        .swipeActions(edge: .leading) {
+            Button {
+                toggleFavorite(s)
+            } label: {
+                Label(
+                    s.isFavorite ? "Favoriden Çıkar" : "Favorilere Ekle",
+                    systemImage: s.isFavorite ? "star.slash.fill" : "star.fill"
+                )
+            }
+            .tint(theme.colors.tertiary)
+        }
+    }
+
+    private func playlistForProfile(active: ChildProfile?) -> [Story] {
+        stories.filter { $0.profile?.id == active?.id }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private func toggleFavorite(_ s: Story) {
+        s.isFavorite.toggle()
+        try? modelContext.save()
+    }
+
+    private func deleteStory(_ s: Story) {
+        if let name = s.audioFileName {
+            try? AudioCacheManager.removeFile(named: name)
+        }
+        modelContext.delete(s)
+        try? modelContext.save()
     }
 
     private var navBar: some View {
@@ -137,34 +227,7 @@ struct LibraryView: View {
         Text(t)
             .font(MasalFont.labelMedium())
             .foregroundStyle(theme.colors.secondary.opacity(0.65))
-            .padding(.horizontal, 4)
-    }
-
-    private func storyGroup(_ items: [Story]) -> some View {
-        let c = theme.colors
-        return VStack(spacing: 0) {
-            ForEach(Array(items.enumerated()), id: \.element.persistentModelID) { idx, s in
-                Button {
-                    playerStory = s
-                    showPlayer = true
-                } label: {
-                    StoryListRow(
-                        title: s.title,
-                        durationText: "\(max(1, s.durationSeconds / 60)) dk",
-                        dateText: df.string(from: s.createdAt),
-                        showCloud: true,
-                        systemImageName: "moon.stars"
-                    )
-                }
-                .buttonStyle(.plain)
-                if idx < items.count - 1 {
-                    Color.clear.frame(height: 1)
-                        .background(c.surfaceContainerHighest.opacity(0.35))
-                }
-            }
-        }
-        .background(c.surfaceContainer)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous))
+            .textCase(nil)
     }
 
     private var statsBento: some View {

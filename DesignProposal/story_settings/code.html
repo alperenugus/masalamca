@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Masal Ayarları - Masal Amca</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary-fixed-dim": "#c8bfff",
+              "inverse-surface": "#d6e3ff",
+              "inverse-on-surface": "#233148",
+              "surface-container-lowest": "#010e24",
+              "on-tertiary-fixed": "#221b00",
+              "on-error-container": "#ffdad6",
+              "on-secondary": "#233148",
+              "surface": "#041329",
+              "on-tertiary": "#3a3000",
+              "on-background": "#d6e3ff",
+              "surface-container-high": "#1c2a41",
+              "on-secondary-container": "#abb9d6",
+              "inverse-primary": "#5d4cbf",
+              "error": "#ffb4ab",
+              "on-surface-variant": "#c9c4d5",
+              "tertiary-container": "#c9a900",
+              "primary": "#c8bfff",
+              "tertiary-fixed": "#ffe16d",
+              "surface-variant": "#27354c",
+              "error-container": "#93000a",
+              "on-primary-container": "#f0ebff",
+              "on-tertiary-container": "#4c3f00",
+              "secondary": "#b9c7e4",
+              "primary-fixed": "#e5deff",
+              "surface-container-highest": "#27354c",
+              "on-primary": "#2d128f",
+              "on-primary-fixed": "#190064",
+              "surface-bright": "#2c3951",
+              "secondary-fixed-dim": "#b9c7e4",
+              "primary-container": "#6a5acd",
+              "outline-variant": "#474553",
+              "on-primary-fixed-variant": "#4532a6",
+              "tertiary": "#e9c400",
+              "tertiary-fixed-dim": "#e9c400",
+              "surface-dim": "#041329",
+              "on-secondary-fixed-variant": "#39475f",
+              "outline": "#928f9e",
+              "on-error": "#690005",
+              "secondary-fixed": "#d6e3ff",
+              "on-surface": "#d6e3ff",
+              "on-secondary-fixed": "#0d1c32",
+              "background": "#041329",
+              "secondary-container": "#3c4962",
+              "surface-container": "#112036",
+              "on-tertiary-fixed-variant": "#544600",
+              "surface-container-low": "#0d1c32",
+              "surface-tint": "#c8bfff"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #041329;
+            color: #d6e3ff;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: rgba(17, 32, 54, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body selection:bg-primary/30">
+<!-- TopAppBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#041329] flex items-center justify-between px-6 h-16 w-full">
+<div class="flex items-center gap-4">
+<button class="text-[#c8bfff] active:scale-95 duration-200 hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-headline text-lg font-bold tracking-tight text-[#c8bfff]">Masal Ayarları</h1>
+</div>
+<div class="w-6"></div> <!-- Spacer for centering title if needed by 'small_center_aligned' type -->
+</nav>
+<main class="pt-24 pb-32 px-6 max-w-2xl mx-auto space-y-11">
+<!-- Header Illustration Area -->
+<div class="relative w-full h-48 rounded-xl overflow-hidden mb-8">
+<div class="absolute inset-0 bg-gradient-to-t from-background to-transparent z-10"></div>
+<img alt="Masal Teması" class="w-full h-full object-cover opacity-60" data-alt="dreamy mystical forest at night with glowing butterflies and soft purple starlight bokeh effect" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxj1OsEFdG9Iby85kfmTqF7E1vOgZW9Bh4yDHhkNn7MWVT17kfpkZ03PeDJTIOdou9zglANftr4HOc0Ib5nyK5rCfYlOtrfZCzGfET9UUMfBJ5lSy93ZFpMNj-btk5ax73d9SZPg2j3KLHRBAamFUZyZK20g-U5jh_Q2l17CJwa18QLpShs5uZaFlkDkn5ZZLEebass0NYhni7AeV5knKjmKi__EFhySEFpPseIiUE2J4ljmmS3nnbU9aJ9M2yLb6GQJLY63xBBQ"/>
+<div class="absolute bottom-4 left-4 z-20">
+<p class="text-secondary font-medium text-sm">Ayarları düzenle ve</p>
+<h2 class="text-2xl font-headline font-bold text-primary-fixed-dim">Sihirli Yolculuğa Başla</h2>
+</div>
+</div>
+<!-- Section: Masal Süresi -->
+<section class="space-y-4">
+<h3 class="font-headline text-title-md font-bold text-secondary px-2">Masal Süresi</h3>
+<div class="bg-surface-container rounded-lg p-2 flex gap-1 items-center">
+<button class="flex-1 py-3 px-4 rounded-lg bg-primary-container text-on-primary-container font-bold text-sm transition-all duration-300 active:scale-95">
+                    Kısa (5 dk)
+                </button>
+<button class="flex-1 py-3 px-4 rounded-lg hover:bg-surface-container-high text-secondary font-medium text-sm transition-all duration-300">
+                    Orta (10 dk)
+                </button>
+<button class="flex-1 py-3 px-4 rounded-lg hover:bg-surface-container-high text-secondary font-medium text-sm transition-all duration-300">
+                    Uzun (15+ dk)
+                </button>
+</div>
+</section>
+<!-- Section: Anlatıcı Sesi -->
+<section class="space-y-4">
+<div class="flex items-center justify-between px-2">
+<h3 class="font-headline text-title-md font-bold text-secondary">Anlatıcı Sesi</h3>
+<span class="text-xs text-primary/60 font-medium">Önizleme için dokun</span>
+</div>
+<div class="space-y-2">
+<!-- Voice Option 1 -->
+<div class="group bg-surface-container-high rounded-lg p-4 flex items-center justify-between hover:bg-surface-variant transition-colors cursor-pointer active:scale-[0.98] duration-200">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">cloud</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Yumuşak Bulut</p>
+<p class="text-xs text-secondary/70">Sakinleştirici ve alçak ses</p>
+</div>
+</div>
+<button class="w-10 h-10 rounded-full border border-outline-variant/30 flex items-center justify-center text-primary-fixed-dim group-hover:bg-primary group-hover:text-on-primary transition-all">
+<span class="material-symbols-outlined">play_arrow</span>
+</button>
+</div>
+<!-- Voice Option 2 (Selected State) -->
+<div class="group bg-surface-container-highest rounded-lg p-4 flex items-center justify-between ring-1 ring-primary/40 relative overflow-hidden active:scale-[0.98] duration-200">
+<div class="absolute inset-0 bg-primary/5"></div>
+<div class="flex items-center gap-4 relative z-10">
+<div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">elderly</span>
+</div>
+<div>
+<p class="font-bold text-primary-fixed-dim">Bilge Dede</p>
+<p class="text-xs text-on-primary-container/70">Tok ve güven verici bir anlatım</p>
+</div>
+</div>
+<div class="flex items-center gap-2 relative z-10">
+<span class="text-primary text-xs font-bold uppercase tracking-widest mr-2">Seçili</span>
+<button class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+</div>
+</div>
+<!-- Voice Option 3 -->
+<div class="group bg-surface-container-high rounded-lg p-4 flex items-center justify-between hover:bg-surface-variant transition-colors cursor-pointer active:scale-[0.98] duration-200">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_fix_high</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Neşeli Peri</p>
+<p class="text-xs text-secondary/70">Canlı ve enerjik karakter sesleri</p>
+</div>
+</div>
+<button class="w-10 h-10 rounded-full border border-outline-variant/30 flex items-center justify-center text-primary-fixed-dim group-hover:bg-primary group-hover:text-on-primary transition-all">
+<span class="material-symbols-outlined">play_arrow</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Section: Hikaye Teması (Bento Grid Style) -->
+<section class="space-y-4">
+<h3 class="font-headline text-title-md font-bold text-secondary px-2">Hikaye Teması</h3>
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-surface-container-high rounded-lg p-4 border border-primary/20 flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform cursor-pointer">
+<span class="material-symbols-outlined text-tertiary text-4xl" style="font-variation-settings: 'FILL' 1;">explore</span>
+<span class="font-bold text-on-surface">Macera</span>
+</div>
+<div class="bg-surface-container-low rounded-lg p-4 flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform cursor-pointer opacity-60">
+<span class="material-symbols-outlined text-secondary text-4xl">forest</span>
+<span class="font-bold text-secondary">Doğa</span>
+</div>
+<div class="bg-surface-container-low rounded-lg p-4 flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform cursor-pointer opacity-60">
+<span class="material-symbols-outlined text-secondary text-4xl">rocket_launch</span>
+<span class="font-bold text-secondary">Uzay</span>
+</div>
+<div class="bg-surface-container-low rounded-lg p-4 flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform cursor-pointer opacity-60">
+<span class="material-symbols-outlined text-secondary text-4xl">castle</span>
+<span class="font-bold text-secondary">Masal</span>
+</div>
+</div>
+</section>
+<!-- Section: Ek Ayarlar -->
+<section class="space-y-4">
+<h3 class="font-headline text-title-md font-bold text-secondary px-2">Ek Ayarlar</h3>
+<div class="bg-surface-container-high rounded-lg overflow-hidden">
+<!-- Toggle Item 1 -->
+<div class="flex items-center justify-between p-4 border-b border-outline-variant/10">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">bedtime</span>
+<span class="font-medium text-on-surface">Otomatik Kapanma</span>
+</div>
+<div class="w-12 h-6 bg-primary rounded-full relative cursor-pointer">
+<div class="absolute right-1 top-1 w-4 h-4 bg-on-primary rounded-full shadow-sm"></div>
+</div>
+</div>
+<!-- Toggle Item 2 -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">music_note</span>
+<span class="font-medium text-on-surface">Arkaplan Müziği</span>
+</div>
+<div class="w-12 h-6 bg-primary rounded-full relative cursor-pointer">
+<div class="absolute right-1 top-1 w-4 h-4 bg-on-primary rounded-full shadow-sm"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA Action -->
+<div class="pt-6">
+<button class="w-full py-5 rounded-lg bg-gradient-to-r from-primary-container to-primary text-on-primary-container font-headline font-extrabold text-lg shadow-[0_8px_24px_rgba(106,90,205,0.3)] active:scale-95 duration-200">
+                Ayarları Kaydet
+            </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full rounded-t-[3rem] z-50 bg-[#112036]/80 backdrop-blur-xl shadow-[0_-8px_24px_rgba(106,90,205,0.15)] flex justify-around items-center pt-3 pb-8 px-4 w-full">
+<div class="flex flex-col items-center justify-center text-[#b9c7e4] opacity-60 hover:text-[#c8bfff] transition-colors active:scale-90 duration-300">
+<span class="material-symbols-outlined mb-1">auto_stories</span>
+<span class="font-manrope text-[10px] font-medium">Kitaplık</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#b9c7e4] opacity-60 hover:text-[#c8bfff] transition-colors active:scale-90 duration-300">
+<span class="material-symbols-outlined mb-1">explore</span>
+<span class="font-manrope text-[10px] font-medium">Keşfet</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#b9c7e4] opacity-60 hover:text-[#c8bfff] transition-colors active:scale-90 duration-300">
+<span class="material-symbols-outlined mb-1">grade</span>
+<span class="font-manrope text-[10px] font-medium">Yıldızlarım</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#c8bfff] font-bold bg-[#6A5ACD]/20 rounded-2xl px-3 py-1 active:scale-90 duration-300">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-manrope text-[10px] font-medium">Ayarlar</span>
+</div>
+</nav>
+</body></html>

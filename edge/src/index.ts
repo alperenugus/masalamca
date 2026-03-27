@@ -17,6 +17,8 @@ interface StoryRequest {
   themes: string[];
   behavioral_goal?: string;
   language: string;
+  /** "short" | "medium" | "long" — kelime hedefi */
+  target_length?: string;
 }
 
 interface TTSRequest {
@@ -25,13 +27,25 @@ interface TTSRequest {
   output_format: string;
 }
 
-function systemPromptForAge(ageHint: string): string {
+function lengthWordGuidance(target?: string): string {
+  switch (target) {
+    case "short":
+      return "Yaklaşık 250-350 kelime; kısa ve öz tut.";
+    case "long":
+      return "Yaklaşık 650-950 kelime; biraz daha uzun ve ayrıntılı tut.";
+    default:
+      return "Yaklaşık 400-650 kelime.";
+  }
+}
+
+function systemPromptForAge(ageHint: string, targetLength?: string): string {
+  const len = lengthWordGuidance(targetLength);
   return `Sen Türkçe konuşan, çocuklar için güvenli uyku masalları yazan bir asistansın.
 Kurallar:
 - Sadece Türkçe yaz.
 - Şiddet, korku, yaralanma, ölüm yok.
 - Çocuk kahraman olsun; yaşa uygun kelime hazısı (${ageHint}).
-- Yaklaşık 400-600 kelime; sıcak, yatıştırıcı ton.
+- ${len} Sıcak, yatıştırıcı ton.
 - JSON döndür: {"title":"...","body":"...","genre":"calming|adventure|educational"}`;
 }
 
@@ -94,7 +108,10 @@ async function handleStory(request: Request, env: Env): Promise<Response> {
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: systemPromptForAge(hint) },
+        {
+          role: "system",
+          content: systemPromptForAge(hint, body.target_length),
+        },
         { role: "user", content: user },
       ],
       temperature: 0.7,

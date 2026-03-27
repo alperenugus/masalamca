@@ -12,6 +12,8 @@ final class SleepTimerController {
     private var task: Task<Void, Never>?
     private(set) var remaining: TimeInterval = 0
     private(set) var isRunning = false
+    /// Wall-clock time when the timer fires; surfaced on Live Activity / widget.
+    private(set) var sleepTimerEndDate: Date?
 
     var onFire: (() -> Void)?
 
@@ -19,6 +21,7 @@ final class SleepTimerController {
         cancel()
         self.onFire = onFire
         remaining = TimeInterval(minutes * 60)
+        sleepTimerEndDate = Date().addingTimeInterval(remaining)
         isRunning = true
         task = Task { [weak self] in
             guard let self else { return }
@@ -32,6 +35,7 @@ final class SleepTimerController {
             await MainActor.run {
                 self.isRunning = false
                 self.remaining = 0
+                self.sleepTimerEndDate = nil
                 self.onFire?()
                 self.onFire = nil
             }
@@ -43,6 +47,7 @@ final class SleepTimerController {
         task = nil
         isRunning = false
         remaining = 0
+        sleepTimerEndDate = nil
         onFire = nil
     }
 }

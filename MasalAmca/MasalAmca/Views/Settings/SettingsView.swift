@@ -22,6 +22,18 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section {
+                    NavigationLink {
+                        StorySettingsView()
+                            .masalThemeManager(theme)
+                    } label: {
+                        Label("Masal Ayarları", systemImage: "book.pages.fill")
+                    }
+                } header: {
+                    Text("Masal")
+                }
+                .listRowBackground(c.surfaceContainer)
+
+                Section {
                     HStack {
                         Text("Premium")
                         Spacer()

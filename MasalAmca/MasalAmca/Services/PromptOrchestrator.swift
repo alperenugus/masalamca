@@ -11,6 +11,8 @@ struct StoryGenerateRequestDTO: Codable, Sendable {
     var themes: [String]
     var behavioralGoal: String?
     var language: String
+    /// İsteğe bağlı: `short` | `medium` | `long` — edge proxy kelime hedefini ayarlar.
+    var targetLength: String?
 
     enum CodingKeys: String, CodingKey {
         case childName = "child_name"
@@ -18,6 +20,7 @@ struct StoryGenerateRequestDTO: Codable, Sendable {
         case themes
         case behavioralGoal = "behavioral_goal"
         case language
+        case targetLength = "target_length"
     }
 }
 
@@ -48,12 +51,14 @@ struct TTSRequestDTO: Codable, Sendable {
 
 enum PromptOrchestrator {
     static func storyRequest(from profile: ChildProfile) -> StoryGenerateRequestDTO {
-        StoryGenerateRequestDTO(
+        let prefs = StoryPreferences.load(for: profile)
+        return StoryGenerateRequestDTO(
             childName: profile.name,
             ageGroup: profile.ageGroup.rawValue,
-            themes: profile.themes.map(\.rawValue),
+            themes: prefs.bento.apiThemeHints,
             behavioralGoal: profile.behavioralGoals.first,
-            language: "tr"
+            language: "tr",
+            targetLength: prefs.length.rawValue
         )
     }
 }

@@ -13,15 +13,16 @@ struct HomeView: View {
 
     @Bindable var subscription: SubscriptionManager
     @Bindable var mixer: MixerEngine
+    @Binding var tabSelection: MainTab
 
     @Query(sort: \Story.createdAt, order: .reverse) private var stories: [Story]
     @Query private var profiles: [ChildProfile]
 
     @State private var isGenerating = false
     @State private var generationError: String?
-    @State private var playerStory: Story?
-    @State private var showPlayer = false
+    @State private var playerPresentation: PresentedStory?
     @State private var showPaywall = false
+    @State private var showNotificationsSheet = false
     @State private var storyAudio = AudioPlayerService()
 
     private let storyService = StoryService()
@@ -29,30 +30,38 @@ struct HomeView: View {
     var body: some View {
         let c = theme.colors
         let active = profileManager.activeProfile(from: profiles)
-        ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxl) {
-                header
-                greeting(name: active?.name ?? "Can")
-                generateButton(profile: active)
-                recentSection(active: active)
-                quickNoise
-                tipCard
+        ZStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxl) {
+                    header
+                    greeting(name: active?.name ?? "Can")
+                    generateButton(profile: active)
+                    recentSection(active: active)
+                    quickNoise
+                    tipCard
+                }
+                .padding(.horizontal, DesignTokens.Spacing.lg)
+                .padding(.bottom, 120)
             }
-            .padding(.horizontal, DesignTokens.Spacing.lg)
-            .padding(.bottom, 120)
+            .scrollIndicators(.hidden)
+
+            if isGenerating {
+                StoryGenerationLoadingView()
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
         }
-        .scrollIndicators(.hidden)
         .background(c.surface.ignoresSafeArea())
-        .fullScreenCover(isPresented: $showPlayer, onDismiss: { playerStory = nil }) {
-            if let story = playerStory {
-                StoryPlayerView(
-                    audio: storyAudio,
-                    mixer: mixer,
-                    subscription: subscription,
-                    story: story
-                )
-                .masalThemeManager(theme)
-            }
+        .animation(.easeInOut(duration: 0.35), value: isGenerating)
+        .fullScreenCover(item: $playerPresentation, onDismiss: { storyAudio.stop() }) { wrap in
+            StoryPlayerView(
+                audio: storyAudio,
+                mixer: mixer,
+                subscription: subscription,
+                startStory: wrap.startStory,
+                playlist: wrap.playlist
+            )
+            .masalThemeManager(theme)
         }
         .alert("Hata", isPresented: Binding(
             get: { generationError != nil },
@@ -68,11 +77,17 @@ struct HomeView: View {
             }
             .presentationDetents([.large])
         }
+        .sheet(isPresented: $showNotificationsSheet) {
+            NotificationsInfoSheet()
+                .masalThemeManager(theme)
+                .presentationDetents([.medium])
+        }
     }
 
     private var header: some View {
         let c = theme.colors
-        return HStack {
+        let active = profileManager.activeProfile(from: profiles)
+        return HStack(spacing: DesignTokens.Spacing.sm) {
             HStack(spacing: 12) {
                 Image(systemName: "person.circle")
                     .font(.title2)
@@ -81,12 +96,65 @@ struct HomeView: View {
                     .font(MasalFont.titleMedium())
                     .foregroundStyle(c.primary)
             }
-            Spacer()
-            Image(systemName: "bell")
-                .font(.title3)
-                .foregroundStyle(c.primary)
+            Spacer(minLength: 8)
+            childSwitcherMenu(active: active)
+            Button {
+                showNotificationsSheet = true
+            } label: {
+                Image(systemName: "bell")
+                    .font(.title3)
+                    .foregroundStyle(c.primary)
+                    .frame(minWidth: 44, minHeight: 44)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Bildirimler")
+            .accessibilityHint("Uyku hatırlatıcıları hakkında bilgi")
         }
         .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private func childSwitcherMenu(active: ChildProfile?) -> some View {
+        let c = theme.colors
+        Menu {
+            if profiles.isEmpty {
+                Text("Kayıtlı çocuk yok")
+            }
+            ForEach(profiles, id: \.id) { profile in
+                Button {
+                    profileManager.switchTo(profile)
+                } label: {
+                    HStack {
+                        Text(profile.name)
+                        Spacer()
+                        if profile.id == active?.id {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "person.2.fill")
+                    .font(.caption.weight(.semibold))
+                Text(active?.name ?? "Çocuk")
+                    .font(MasalFont.labelMedium())
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.bold))
+            }
+            .foregroundStyle(c.primary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(c.surfaceContainerHigh.opacity(0.85))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(c.outlineVariant.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .accessibilityLabel("Aktif çocuk: \(active?.name ?? "yok")")
+        .accessibilityHint("Çocuk profiline geçmek için menüyü açın")
     }
 
     private func greeting(name: String) -> some View {
@@ -124,9 +192,6 @@ struct HomeView: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous))
             .shadow(color: c.ctaShadow, radius: 20, x: 0, y: 8)
-            .overlay {
-                if isGenerating { ProgressView().tint(c.onPrimaryContainer).scaleEffect(1.2) }
-            }
         }
         .buttonStyle(.plain)
         .disabled(isGenerating || profile == nil)
@@ -141,9 +206,11 @@ struct HomeView: View {
                     .font(MasalFont.titleMedium())
                     .foregroundStyle(c.onSurface)
                 Spacer()
-                Button("Tümünü Gör") {}
-                    .font(MasalFont.bodyMedium())
-                    .foregroundStyle(c.primary)
+                Button("Tümünü Gör") {
+                    tabSelection = .library
+                }
+                .font(MasalFont.bodyMedium())
+                .foregroundStyle(c.primary)
             }
             if recent.isEmpty {
                 Text("Henüz masal yok — yukarıdaki düğmeyle ilk masalı üret.")
@@ -154,8 +221,7 @@ struct HomeView: View {
                     HStack(spacing: DesignTokens.Spacing.md) {
                         ForEach(Array(recent), id: \.persistentModelID) { s in
                             Button {
-                                playerStory = s
-                                showPlayer = true
+                                presentPlayer(story: s, active: active)
                             } label: {
                                 StoryCard(
                                     title: s.title,
@@ -165,6 +231,21 @@ struct HomeView: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .contextMenu {
+                                Button {
+                                    toggleFavorite(s)
+                                } label: {
+                                    Label(
+                                        s.isFavorite ? "Favoriden Çıkar" : "Favorilere Ekle",
+                                        systemImage: s.isFavorite ? "star.slash" : "star.fill"
+                                    )
+                                }
+                                Button(role: .destructive) {
+                                    deleteStory(s)
+                                } label: {
+                                    Label("Masalı Sil", systemImage: "trash")
+                                }
+                            }
                         }
                     }
                 }
@@ -180,9 +261,19 @@ struct HomeView: View {
             (.ocean, "Okyanus", "Derin Dalgalar")
         ]
         return VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-            Text("Hızlı Beyaz Gürültü")
-                .font(MasalFont.titleMedium())
-                .foregroundStyle(c.onSurface)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Hızlı Beyaz Gürültü")
+                    .font(MasalFont.titleMedium())
+                    .foregroundStyle(c.onSurface)
+                HStack(spacing: 6) {
+                    Image(systemName: "crown.fill")
+                        .font(.caption2)
+                        .foregroundStyle(c.tertiary)
+                    Text("Taç işaretli sesler Premium’a özel")
+                        .font(MasalFont.labelSmall())
+                        .foregroundStyle(c.onSurfaceVariant.opacity(0.85))
+                }
+            }
             VStack(spacing: DesignTokens.Spacing.sm) {
                 ForEach(quick, id: \.0) { item in
                     quickNoiseRow(sound: item.0, title: item.1, subtitle: item.2)
@@ -193,6 +284,7 @@ struct HomeView: View {
 
     private func quickNoiseRow(sound: MixerSound, title: String, subtitle: String) -> some View {
         let c = theme.colors
+        let isPremiumOnly = !MixerSound.freeTier.contains(sound)
         let on = mixer.enabled[sound] ?? false
         return Button {
             if !subscription.canUseSound(sound) {
@@ -211,10 +303,18 @@ struct HomeView: View {
                                 .foregroundStyle(c.primary)
                         }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(title)
-                            .font(MasalFont.bodyMedium())
-                            .fontWeight(.bold)
-                            .foregroundStyle(c.onSurface)
+                        HStack(spacing: 6) {
+                            Text(title)
+                                .font(MasalFont.bodyMedium())
+                                .fontWeight(.bold)
+                                .foregroundStyle(c.onSurface)
+                            if isPremiumOnly {
+                                Image(systemName: "crown.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(c.tertiary)
+                                    .accessibilityLabel("Premium ses")
+                            }
+                        }
                         Text(subtitle)
                             .font(MasalFont.labelMedium())
                             .foregroundStyle(c.onSurfaceVariant.opacity(0.65))
@@ -268,6 +368,28 @@ struct HomeView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous))
     }
 
+    private func profilePlaylist(active: ChildProfile?) -> [Story] {
+        stories.filter { $0.profile?.id == active?.id }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private func presentPlayer(story: Story, active: ChildProfile?) {
+        playerPresentation = PresentedStory(startStory: story, playlist: profilePlaylist(active: active))
+    }
+
+    private func toggleFavorite(_ s: Story) {
+        s.isFavorite.toggle()
+        try? modelContext.save()
+    }
+
+    private func deleteStory(_ s: Story) {
+        if let name = s.audioFileName {
+            try? AudioCacheManager.removeFile(named: name)
+        }
+        modelContext.delete(s)
+        try? modelContext.save()
+    }
+
     @MainActor
     private func generateStory(profile: ChildProfile?) async {
         guard let profile else { return }
@@ -292,12 +414,11 @@ struct HomeView: View {
                 modelContext.insert(demo)
                 subscription.registerStoryGenerated()
                 try modelContext.save()
-                playerStory = demo
-                showPlayer = true
+                playerPresentation = PresentedStory(startStory: demo, playlist: profilePlaylist(active: profile))
                 return
             }
 
-            let voice = Bundle.main.object(forInfoDictionaryKey: "ElevenLabsVoiceID") as? String ?? "default"
+            let voice = StoryPreferences.resolvedVoiceID()
             let result = try await storyService.generateStoryAndAudio(
                 profile: profile,
                 voiceID: voice,
@@ -318,8 +439,7 @@ struct HomeView: View {
             story.audioFileName = fileName
             subscription.registerStoryGenerated()
             try modelContext.save()
-            playerStory = story
-            showPlayer = true
+            playerPresentation = PresentedStory(startStory: story, playlist: profilePlaylist(active: profile))
         } catch {
             generationError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }

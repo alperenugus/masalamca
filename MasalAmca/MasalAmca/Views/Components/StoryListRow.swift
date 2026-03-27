@@ -12,6 +12,8 @@ struct StoryListRow: View {
     let dateText: String
     let showCloud: Bool
     let systemImageName: String
+    var isFavorite: Bool = false
+    var onFavoriteToggle: (() -> Void)? = nil
 
     var body: some View {
         let c = theme.colors
@@ -47,6 +49,19 @@ struct StoryListRow: View {
                 .foregroundStyle(c.secondary.opacity(0.75))
             }
             Spacer(minLength: 0)
+            if let onFavoriteToggle {
+                Button {
+                    onFavoriteToggle()
+                } label: {
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(isFavorite ? c.tertiary : c.secondary.opacity(0.55))
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isFavorite ? "Favoriden çıkar" : "Favorilere ekle")
+            }
             Image(systemName: "chevron.right")
                 .font(.body.weight(.medium))
                 .foregroundStyle(c.secondary.opacity(0.4))

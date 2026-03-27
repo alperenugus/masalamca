@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-tint": "#c8bfff",
+              "background": "#041329",
+              "primary-fixed": "#e5deff",
+              "on-secondary-fixed-variant": "#39475f",
+              "tertiary-fixed-dim": "#e9c400",
+              "on-primary-fixed": "#190064",
+              "surface-container-highest": "#27354c",
+              "secondary-fixed": "#d6e3ff",
+              "outline-variant": "#474553",
+              "primary-fixed-dim": "#c8bfff",
+              "on-primary-container": "#f0ebff",
+              "secondary-fixed-dim": "#b9c7e4",
+              "on-tertiary-container": "#4c3f00",
+              "inverse-on-surface": "#233148",
+              "primary": "#c8bfff",
+              "on-tertiary-fixed-variant": "#544600",
+              "primary-container": "#6a5acd",
+              "tertiary": "#e9c400",
+              "surface-container-high": "#1c2a41",
+              "tertiary-container": "#c9a900",
+              "on-background": "#d6e3ff",
+              "on-error": "#690005",
+              "on-surface": "#d6e3ff",
+              "on-secondary-container": "#abb9d6",
+              "on-primary": "#2d128f",
+              "on-error-container": "#ffdad6",
+              "on-primary-fixed-variant": "#4532a6",
+              "secondary": "#b9c7e4",
+              "surface-bright": "#2c3951",
+              "surface-variant": "#27354c",
+              "on-tertiary": "#3a3000",
+              "surface-dim": "#041329",
+              "inverse-surface": "#d6e3ff",
+              "tertiary-fixed": "#ffe16d",
+              "outline": "#928f9e",
+              "on-surface-variant": "#c9c4d5",
+              "on-secondary-fixed": "#0d1c32",
+              "error-container": "#93000a",
+              "error": "#ffb4ab",
+              "secondary-container": "#3c4962",
+              "surface-container-lowest": "#010e24",
+              "surface-container": "#112036",
+              "on-tertiary-fixed": "#221b00",
+              "surface-container-low": "#0d1c32",
+              "surface": "#041329",
+              "on-secondary": "#233148",
+              "inverse-primary": "#5d4cbf"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        @keyframes orbit {
+            from { transform: rotate(0deg) translateX(80px) rotate(0deg); }
+            to { transform: rotate(360deg) translateX(80px) rotate(-360deg); }
+        }
+        @keyframes pulse-gentle {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .star-orbit {
+            position: absolute;
+            animation: orbit 8s linear infinite;
+        }
+        .star-orbit:nth-child(2) { animation-delay: -2s; }
+        .star-orbit:nth-child(3) { animation-delay: -4s; }
+        .star-orbit:nth-child(4) { animation-delay: -6s; }
+        
+        .pulse-core {
+            animation: pulse-gentle 3s ease-in-out infinite;
+        }
+        .float-text {
+            animation: float 4s ease-in-out infinite;
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-background font-body text-on-background selection:bg-primary/30 antialiased overflow-hidden">
+<!-- Magical Loading Screen Canvas -->
+<main class="relative min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-background via-[#0d1c32] to-[#1c2a41] p-8">
+<!-- Background Ambient Glows -->
+<div class="absolute top-1/4 -left-20 w-96 h-96 bg-primary/10 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-1/4 -right-20 w-80 h-80 bg-tertiary/5 rounded-full blur-[100px]"></div>
+<!-- Centerpiece Animation -->
+<div class="relative w-64 h-64 flex items-center justify-center mb-16">
+<!-- Rotating Magic Ring -->
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="star-orbit text-tertiary">
+<span class="material-symbols-outlined text-2xl" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div class="star-orbit text-primary/60">
+<span class="material-symbols-outlined text-xl" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<div class="star-orbit text-tertiary/80">
+<span class="material-symbols-outlined text-lg" data-icon="sparkles" style="font-variation-settings: 'FILL' 1;">colors_spark</span>
+</div>
+<div class="star-orbit text-primary-fixed">
+<span class="material-symbols-outlined text-sm" data-icon="star" style="font-variation-settings: 'FILL' 0;">star</span>
+</div>
+</div>
+<!-- App Icon Central Element -->
+<div class="relative z-10 pulse-core">
+<div class="w-32 h-32 rounded-xl overflow-hidden shadow-[0_0_60px_rgba(106,90,205,0.4)] border border-primary/20">
+<img alt="Masal Amca App Icon" class="w-full h-full object-cover" data-alt="Midnight Fable App Icon - Friendly moon wearing a sleeping cap" src="https://lh3.googleusercontent.com/aida/ADBb0uiZGsPQoC1x9cK43cbJ2W4jQ2CntDGdN-_dzWIEsA5XGaLsNEix_ibiGQpALeiXUHWZWMOMSJyuT60wFxzEfqWffkbJQaS_CMzrxHo1ctFPIgSql32LZEiOb9EVDDf0MhB9HUvO8JWp_-eY8ROWCzzODdh2b9C0W14xVKW3GMx9UBwZWBzTft7pY5PRdQMPSPFHxdof-CNgxdj4v-R_k32U9WmbGpdSynqDFD_7QmmSwH3NdO5E-Wp0Zw"/>
+</div>
+<!-- Outer Glow Ring -->
+<div class="absolute -inset-4 border border-primary/10 rounded-[2.5rem] opacity-50"></div>
+</div>
+</div>
+<!-- Loading Content Section -->
+<div class="w-full max-w-sm flex flex-col items-center space-y-8 text-center">
+<!-- Dynamic Messaging Container -->
+<div class="h-12 flex items-center justify-center">
+<p class="float-text font-headline text-xl md:text-2xl font-semibold text-on-primary-container tracking-tight">
+                    Masal Amca rüyalardan ilham alıyor...
+                </p>
+</div>
+<!-- Custom Progress Bar -->
+<div class="w-full space-y-3">
+<div class="relative w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+<!-- Progress Fill -->
+<div class="absolute inset-y-0 left-0 w-3/4 bg-gradient-to-r from-tertiary via-primary to-primary-container rounded-full shadow-[0_0_12px_rgba(233,196,0,0.4)] transition-all duration-1000"></div>
+<!-- Trailing Star Light -->
+<div class="absolute left-[72%] top-1/2 -translate-y-1/2 text-tertiary">
+<span class="material-symbols-outlined text-sm" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+</div>
+<!-- Secondary Soft Messages (Fallback/Wait) -->
+<div class="flex flex-col gap-2 opacity-60">
+<p class="text-sm font-medium text-secondary">Bu işlem bir dakika veya daha kısa sürebilir!</p>
+</div>
+</div>
+<!-- Decorative Elements -->
+<div class="absolute bottom-12 left-1/2 -translate-x-1/2 text-center">
+<div class="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-md rounded-full border border-white/10">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="auto_stories" style="font-variation-settings: 'FILL' 0;">auto_stories</span>
+<span class="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Sihirli Anlatıcı Hazırlanıyor</span>
+</div>
+</div>
+</main>
+<!-- Overlay Noise Texture -->
+<div class="fixed inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+</body></html>

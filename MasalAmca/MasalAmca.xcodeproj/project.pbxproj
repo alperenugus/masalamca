@@ -6,32 +6,9 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXFileReference section */
-		6964D4BA2F76F76D003E9DEA /* MasalAmca.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MasalAmca.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		7A64D5012F76F76D003E9DEA /* MasalAmcaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MasalAmcaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		7A64D5022F76F76D003E9DEA /* MasalAmcaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MasalAmcaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-/* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		6964D4C72F76F76F003E9DEA /* Exceptions for "MasalAmca" folder in "MasalAmca" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 6964D4B92F76F76D003E9DEA /* MasalAmca */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		6964D4BC2F76F76D003E9DEA /* MasalAmca */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				6964D4C72F76F76F003E9DEA /* Exceptions for "MasalAmca" folder in "MasalAmca" target */,
-			);
-			path = MasalAmca;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
+/* Begin PBXBuildFile section */
+		8B64D6152F76F76D003E9DEA /* MasalAmcaWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8B64D6012F76F76D003E9DEA /* MasalAmcaWidget.appex */; platformFilter = ios; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		7A64D50B2F76F76D003E9DEA /* PBXContainerItemProxy */ = {
@@ -48,7 +25,81 @@
 			remoteGlobalIDString = 6964D4B92F76F76D003E9DEA;
 			remoteInfo = MasalAmca;
 		};
+		8B64D6092F76F76D003E9DEA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6964D4B22F76F76D003E9DEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8B64D6032F76F76D003E9DEA;
+			remoteInfo = MasalAmcaWidget;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8B64D6072F76F76D003E9DEA /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				8B64D6152F76F76D003E9DEA /* MasalAmcaWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		6964D4BA2F76F76D003E9DEA /* MasalAmca.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MasalAmca.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A64D5012F76F76D003E9DEA /* MasalAmcaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MasalAmcaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A64D5022F76F76D003E9DEA /* MasalAmcaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MasalAmcaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8B64D6012F76F76D003E9DEA /* MasalAmcaWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MasalAmcaWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6964D4C72F76F76F003E9DEA /* Exceptions for "MasalAmca" folder in "MasalAmca" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6964D4B92F76F76D003E9DEA /* MasalAmca */;
+		};
+		8B64D60F2F76F76D003E9DEA /* Exceptions for "MasalAmcaWidget" folder in "MasalAmcaWidget" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8B64D6032F76F76D003E9DEA /* MasalAmcaWidget */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		6964D4BC2F76F76D003E9DEA /* MasalAmca */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6964D4C72F76F76F003E9DEA /* Exceptions for "MasalAmca" folder in "MasalAmca" target */,
+			);
+			path = MasalAmca;
+			sourceTree = "<group>";
+		};
+		7A64D5032F76F76D003E9DEA /* MasalAmcaTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MasalAmcaTests;
+			sourceTree = "<group>";
+		};
+		7A64D5042F76F76D003E9DEA /* MasalAmcaUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MasalAmcaUITests;
+			sourceTree = "<group>";
+		};
+		8B64D6022F76F76D003E9DEA /* MasalAmcaWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8B64D60F2F76F76D003E9DEA /* Exceptions for "MasalAmcaWidget" folder in "MasalAmcaWidget" target */,
+			);
+			path = MasalAmcaWidget;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		6964D4B72F76F76D003E9DEA /* Frameworks */ = {
@@ -72,6 +123,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8B64D6052F76F76D003E9DEA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -79,6 +137,7 @@
 			isa = PBXGroup;
 			children = (
 				6964D4BC2F76F76D003E9DEA /* MasalAmca */,
+				8B64D6022F76F76D003E9DEA /* MasalAmcaWidget */,
 				7A64D5032F76F76D003E9DEA /* MasalAmcaTests */,
 				7A64D5042F76F76D003E9DEA /* MasalAmcaUITests */,
 				6964D4BB2F76F76D003E9DEA /* Products */,
@@ -89,20 +148,11 @@
 			isa = PBXGroup;
 			children = (
 				6964D4BA2F76F76D003E9DEA /* MasalAmca.app */,
+				8B64D6012F76F76D003E9DEA /* MasalAmcaWidget.appex */,
 				7A64D5012F76F76D003E9DEA /* MasalAmcaTests.xctest */,
 				7A64D5022F76F76D003E9DEA /* MasalAmcaUITests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		7A64D5032F76F76D003E9DEA /* MasalAmcaTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MasalAmcaTests;
-			sourceTree = "<group>";
-		};
-		7A64D5042F76F76D003E9DEA /* MasalAmcaUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MasalAmcaUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -115,10 +165,12 @@
 				6964D4B62F76F76D003E9DEA /* Sources */,
 				6964D4B72F76F76D003E9DEA /* Frameworks */,
 				6964D4B82F76F76D003E9DEA /* Resources */,
+				8B64D6072F76F76D003E9DEA /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				8B64D60A2F76F76D003E9DEA /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				6964D4BC2F76F76D003E9DEA /* MasalAmca */,
@@ -174,6 +226,28 @@
 			productReference = 7A64D5022F76F76D003E9DEA /* MasalAmcaUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		8B64D6032F76F76D003E9DEA /* MasalAmcaWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8B64D6142F76F76D003E9DEA /* Build configuration list for PBXNativeTarget "MasalAmcaWidget" */;
+			buildPhases = (
+				8B64D6042F76F76D003E9DEA /* Sources */,
+				8B64D6052F76F76D003E9DEA /* Frameworks */,
+				8B64D6062F76F76D003E9DEA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8B64D6022F76F76D003E9DEA /* MasalAmcaWidget */,
+			);
+			name = MasalAmcaWidget;
+			packageProductDependencies = (
+			);
+			productName = MasalAmcaWidget;
+			productReference = 8B64D6012F76F76D003E9DEA /* MasalAmcaWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -195,6 +269,10 @@
 						CreatedOnToolsVersion = 26.0;
 						TestTargetID = 6964D4B92F76F76D003E9DEA;
 					};
+					8B64D6032F76F76D003E9DEA = {
+						CreatedOnToolsVersion = 26.0;
+						DevelopmentTeam = AWZ9QWZ2NC;
+					};
 				};
 			};
 			buildConfigurationList = 6964D4B52F76F76D003E9DEA /* Build configuration list for PBXProject "MasalAmca" */;
@@ -212,6 +290,7 @@
 			projectRoot = "";
 			targets = (
 				6964D4B92F76F76D003E9DEA /* MasalAmca */,
+				8B64D6032F76F76D003E9DEA /* MasalAmcaWidget */,
 				7A64D5052F76F76D003E9DEA /* MasalAmcaTests */,
 				7A64D5062F76F76D003E9DEA /* MasalAmcaUITests */,
 			);
@@ -220,6 +299,13 @@
 
 /* Begin PBXResourcesBuildPhase section */
 		6964D4B82F76F76D003E9DEA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8B64D6062F76F76D003E9DEA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -250,6 +336,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8B64D6042F76F76D003E9DEA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -263,6 +356,11 @@
 			target = 6964D4B92F76F76D003E9DEA /* MasalAmca */;
 			targetProxy = 7A64D50D2F76F76D003E9DEA /* PBXContainerItemProxy */;
 		};
+		8B64D60A2F76F76D003E9DEA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8B64D6032F76F76D003E9DEA /* MasalAmcaWidget */;
+			targetProxy = 8B64D6092F76F76D003E9DEA /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -271,6 +369,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MasalAmca/MasalAmca.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = AWZ9QWZ2NC;
@@ -316,6 +415,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MasalAmca/MasalAmca.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = AWZ9QWZ2NC;
@@ -562,6 +662,70 @@
 			};
 			name = Release;
 		};
+		8B64D6122F76F76D003E9DEA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = MasalAmcaWidget/MasalAmcaWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AWZ9QWZ2NC;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MasalAmcaWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Masal Amca";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = alperenugus.MasalAmca.MasalAmcaWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8B64D6132F76F76D003E9DEA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = MasalAmcaWidget/MasalAmcaWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AWZ9QWZ2NC;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MasalAmcaWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Masal Amca";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = alperenugus.MasalAmca.MasalAmcaWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -597,6 +761,15 @@
 			buildConfigurations = (
 				7A64D5112F76F76D003E9DEA /* Debug */,
 				7A64D5122F76F76D003E9DEA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8B64D6142F76F76D003E9DEA /* Build configuration list for PBXNativeTarget "MasalAmcaWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8B64D6122F76F76D003E9DEA /* Debug */,
+				8B64D6132F76F76D003E9DEA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
