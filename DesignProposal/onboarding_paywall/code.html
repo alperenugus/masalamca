@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus_Jakarta_Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "tertiary": "#e9c400",
+            "on-primary": "#2d128f",
+            "secondary-fixed-dim": "#b9c7e4",
+            "on-primary-fixed": "#190064",
+            "on-tertiary": "#3a3000",
+            "secondary": "#b9c7e4",
+            "error-container": "#93000a",
+            "surface": "#041329",
+            "surface-container-high": "#1c2a41",
+            "on-background": "#d6e3ff",
+            "surface-variant": "#27354c",
+            "on-secondary-fixed": "#0d1c32",
+            "on-primary-container": "#f0ebff",
+            "inverse-on-surface": "#233148",
+            "outline-variant": "#474553",
+            "on-surface-variant": "#c9c4d5",
+            "on-tertiary-container": "#4c3f00",
+            "surface-container-lowest": "#010e24",
+            "inverse-primary": "#5d4cbf",
+            "surface-dim": "#041329",
+            "on-tertiary-fixed-variant": "#544600",
+            "secondary-fixed": "#d6e3ff",
+            "surface-container": "#112036",
+            "on-secondary-container": "#abb9d6",
+            "surface-tint": "#c8bfff",
+            "on-secondary-fixed-variant": "#39475f",
+            "primary-container": "#6a5acd",
+            "on-secondary": "#233148",
+            "on-error-container": "#ffdad6",
+            "primary-fixed-dim": "#c8bfff",
+            "inverse-surface": "#d6e3ff",
+            "primary": "#c8bfff",
+            "background": "#041329",
+            "tertiary-container": "#c9a900",
+            "surface-bright": "#2c3951",
+            "tertiary-fixed": "#ffe16d",
+            "on-surface": "#d6e3ff",
+            "on-error": "#690005",
+            "tertiary-fixed-dim": "#e9c400",
+            "on-tertiary-fixed": "#221b00",
+            "primary-fixed": "#e5deff",
+            "outline": "#928f9e",
+            "on-primary-fixed-variant": "#4532a6",
+            "surface-container-highest": "#27354c",
+            "surface-container-low": "#0d1c32",
+            "error": "#ffb4ab",
+            "secondary-container": "#3c4962"
+          },
+          fontFamily: {
+            "headline": ["Plus Jakarta Sans"],
+            "body": ["Manrope"],
+            "label": ["Manrope"]
+          },
+          borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    .glass-panel {
+      background: rgba(28, 42, 65, 0.4);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .gradient-button {
+      background: linear-gradient(135deg, #6a5acd 0%, #c8bfff 100%);
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      background-color: #041329;
+      background-image: radial-gradient(at 0% 0%, rgba(106, 90, 205, 0.15) 0px, transparent 50%),
+                        radial-gradient(at 100% 100%, rgba(200, 191, 255, 0.1) 0px, transparent 50%);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body text-on-background min-h-screen selection:bg-primary/30">
+<!-- Onboarding Main Canvas -->
+<main class="relative max-w-md mx-auto min-h-screen flex flex-col p-6 pb-32">
+<!-- Header Illustration Area -->
+<header class="flex flex-col items-center pt-8 pb-12">
+<div class="relative w-64 h-64 mb-6">
+<div class="absolute inset-0 bg-primary/20 blur-3xl rounded-full"></div>
+<img alt="Masal Amca" class="relative z-10 w-full h-full object-contain" data-alt="A friendly elderly man with a soft white beard wearing a nightcap and star-patterned robes, sitting on a crescent moon reading a glowing book in a starry night sky, digital art style, soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQmV2B43MNwXcswhcZez7dKpHS-1A3FvPPeUN0L5cI0WyaSph8etlm11ygdtDpCGZYuA-O4bZ8uaQyFIgs9j15SzVRQ2CvzYOY1VyWbHP_UE6Pu8Kvf0EMCjRJGY69mliQ86JdtSrZKceSvARRGsbMHiqekFQ_eEnjePWPzDwNUlVphzXP4dTzRDn7leSKj6huejNyDR69AqSXzTifFlkoVqWmM5LLMl4u6hZ_RGW04ChW3x19HttQ5ipDT2eOwkv-HRZkW4-kUg"/>
+</div>
+<h1 class="font-headline text-3xl font-extrabold text-center tracking-tight text-primary-fixed">
+        Masal Amca'ya Hoş Geldin
+      </h1>
+<p class="text-center text-secondary mt-2 max-w-[280px] leading-relaxed">
+        Birlikte sihirli bir uyku yolculuğuna çıkmaya hazır mısın?
+      </p>
+</header>
+<!-- Onboarding Form -->
+<section class="space-y-8">
+<!-- Child Name Input -->
+<div class="space-y-3">
+<label class="text-label text-sm font-semibold px-1 text-secondary-fixed-dim">Çocuğun İsmi</label>
+<div class="relative">
+<input class="w-full h-14 px-6 rounded-lg bg-surface-container-low border-none focus:ring-2 focus:ring-primary/50 text-on-surface placeholder:text-outline text-lg transition-all" placeholder="Küçük kahramanın adı ne?" type="text"/>
+</div>
+</div>
+<!-- Age Segmented Control -->
+<div class="space-y-3">
+<label class="text-label text-sm font-semibold px-1 text-secondary-fixed-dim">Yaş</label>
+<div class="grid grid-cols-3 gap-2 p-1.5 bg-surface-container-low rounded-xl">
+<button class="h-10 rounded-lg flex items-center justify-center text-sm font-bold bg-surface-container-high text-primary shadow-sm">2-4</button>
+<button class="h-10 rounded-lg flex items-center justify-center text-sm font-bold text-outline hover:text-on-surface transition-colors">5-7</button>
+<button class="h-10 rounded-lg flex items-center justify-center text-sm font-bold text-outline hover:text-on-surface transition-colors">8+</button>
+</div>
+</div>
+<!-- Favorite Themes Chips -->
+<div class="space-y-3">
+<label class="text-label text-sm font-semibold px-1 text-secondary-fixed-dim">Favori Temalar</label>
+<div class="flex flex-wrap gap-2">
+<button class="px-5 py-2.5 rounded-full bg-surface-container-highest text-on-primary-container text-sm font-medium flex items-center gap-2 border border-primary/20">
+<span class="material-symbols-outlined text-lg">pets</span> Hayvanlar
+          </button>
+<button class="px-5 py-2.5 rounded-full bg-surface-container-low text-outline text-sm font-medium flex items-center gap-2 hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined text-lg">rocket_launch</span> Uzay
+          </button>
+<button class="px-5 py-2.5 rounded-full bg-surface-container-low text-outline text-sm font-medium flex items-center gap-2 hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined text-lg">magic_button</span> Sihir
+          </button>
+<button class="px-5 py-2.5 rounded-full bg-surface-container-low text-outline text-sm font-medium flex items-center gap-2 hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined text-lg">castle</span> Masal Dünyası
+          </button>
+</div>
+</div>
+</section>
+<!-- Navigation Action -->
+<div class="mt-auto pt-12">
+<button class="w-full h-16 rounded-xl gradient-button text-on-primary font-headline font-bold text-lg shadow-xl shadow-primary/20 active:scale-95 transition-transform">
+        Devam Et
+      </button>
+</div>
+</main>
+<!-- Paywall Modal (Overlaid) -->
+<div class="fixed inset-0 z-[100] flex items-end justify-center px-4 pb-4 bg-surface/60 backdrop-blur-sm">
+<div class="glass-panel w-full max-w-md rounded-xl overflow-hidden shadow-2xl border border-outline-variant/20 animate-slide-up">
+<!-- Close Button -->
+<button class="absolute top-4 right-4 w-10 h-10 rounded-full bg-surface-container/50 flex items-center justify-center text-on-surface/60 hover:text-on-surface">
+<span class="material-symbols-outlined">close</span>
+</button>
+<div class="p-8 pt-10">
+<!-- Paywall Header -->
+<div class="text-center mb-8">
+<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-tertiary/10 text-tertiary text-xs font-bold uppercase tracking-wider mb-4 border border-tertiary/20">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+            Premium Deneyim
+          </div>
+<h2 class="font-headline text-2xl font-bold text-on-surface">Sınırsız Hayal Gücü</h2>
+<p class="text-secondary mt-2">Masal Amca'nın tüm hazinelerini keşfet</p>
+</div>
+<!-- Features Bento List -->
+<div class="space-y-4 mb-8">
+<div class="flex items-center gap-4 p-4 rounded-lg bg-surface-container/40">
+<div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+</div>
+<div>
+<p class="font-bold text-sm text-on-surface">Sınırsız Hikaye</p>
+<p class="text-xs text-outline">Her gün yeni bir macera</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-lg bg-surface-container/40">
+<div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
+</div>
+<div>
+<p class="font-bold text-sm text-on-surface">Premium AI Sesler</p>
+<p class="text-xs text-outline">En doğal ve rahatlatıcı tonlar</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-lg bg-surface-container/40">
+<div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">cloud_sync</span>
+</div>
+<div>
+<p class="font-bold text-sm text-on-surface">CloudKit Senkronizasyon</p>
+<p class="text-xs text-outline">Tüm cihazlarında kaldığın yerden devam et</p>
+</div>
+</div>
+</div>
+<!-- Subscription Tiers -->
+<div class="grid grid-cols-2 gap-4 mb-8">
+<!-- Monthly -->
+<div class="relative p-5 rounded-lg bg-surface-container-low border border-outline-variant/30 text-center flex flex-col items-center">
+<p class="text-xs font-bold text-outline mb-1">Aylık</p>
+<p class="text-xl font-extrabold text-on-surface">₺49.99</p>
+<p class="text-[10px] text-outline mt-1">İptal edilebilir</p>
+</div>
+<!-- Yearly -->
+<div class="relative p-5 rounded-lg bg-primary/10 border-2 border-primary text-center flex flex-col items-center overflow-hidden">
+<div class="absolute top-0 right-0 bg-primary text-on-primary text-[8px] font-black px-2 py-0.5 rounded-bl-lg">EN POPÜLER</div>
+<p class="text-xs font-bold text-primary mb-1">Yıllık</p>
+<p class="text-xl font-extrabold text-on-surface">₺399.99</p>
+<p class="text-[10px] text-primary/70 mt-1">Yıllık ödeme</p>
+</div>
+</div>
+<!-- Primary CTA -->
+<div class="space-y-4">
+<button class="w-full h-16 rounded-xl gradient-button text-on-primary font-headline font-bold text-lg flex flex-col items-center justify-center leading-tight active:scale-95 transition-all">
+<span>Ücretsiz Denemeyi Başlat</span>
+<span class="text-xs font-medium opacity-80">3 Gün Ücretsiz Deneme</span>
+</button>
+<p class="text-center text-[10px] text-outline px-4">
+            Deneme süresi sonunda iptal edilmezse otomatik yenilenir. <br/>
+<span class="underline">Kullanım Koşulları</span> ve <span class="underline">Gizlilik Politikası</span>
+</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Shared Bottom Navigation Suppression Logic: This is a focused Onboarding journey, so we suppress global nav -->
+</body></html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary": "#e9c400",
+              "on-primary": "#2d128f",
+              "secondary-fixed-dim": "#b9c7e4",
+              "on-primary-fixed": "#190064",
+              "on-tertiary": "#3a3000",
+              "secondary": "#b9c7e4",
+              "error-container": "#93000a",
+              "surface": "#041329",
+              "surface-container-high": "#1c2a41",
+              "on-background": "#d6e3ff",
+              "surface-variant": "#27354c",
+              "on-secondary-fixed": "#0d1c32",
+              "on-primary-container": "#f0ebff",
+              "inverse-on-surface": "#233148",
+              "outline-variant": "#474553",
+              "on-surface-variant": "#c9c4d5",
+              "on-tertiary-container": "#4c3f00",
+              "surface-container-lowest": "#010e24",
+              "inverse-primary": "#5d4cbf",
+              "surface-dim": "#041329",
+              "on-tertiary-fixed-variant": "#544600",
+              "secondary-fixed": "#d6e3ff",
+              "surface-container": "#112036",
+              "on-secondary-container": "#abb9d6",
+              "surface-tint": "#c8bfff",
+              "on-secondary-fixed-variant": "#39475f",
+              "primary-container": "#6a5acd",
+              "on-secondary": "#233148",
+              "on-error-container": "#ffdad6",
+              "primary-fixed-dim": "#c8bfff",
+              "inverse-surface": "#d6e3ff",
+              "primary": "#c8bfff",
+              "background": "#041329",
+              "tertiary-container": "#c9a900",
+              "surface-bright": "#2c3951",
+              "tertiary-fixed": "#ffe16d",
+              "on-surface": "#d6e3ff",
+              "on-error": "#690005",
+              "tertiary-fixed-dim": "#e9c400",
+              "on-tertiary-fixed": "#221b00",
+              "primary-fixed": "#e5deff",
+              "outline": "#928f9e",
+              "on-primary-fixed-variant": "#4532a6",
+              "surface-container-highest": "#27354c",
+              "surface-container-low": "#0d1c32",
+              "error": "#ffb4ab",
+              "secondary-container": "#3c4962"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30 min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-[#041329]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#c8bfff]" data-icon="account_circle">account_circle</span>
+<span class="font-['Plus_Jakarta_Sans'] text-lg font-bold tracking-tight text-[#c8bfff]">Masal Amca</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#c8bfff] hover:opacity-80 transition-opacity" data-icon="notifications">notifications</span>
+</div>
+</header>
+<main class="pt-24 px-6 space-y-10">
+<!-- Hero Greeting -->
+<section class="space-y-2">
+<h1 class="text-on-surface font-headline text-3xl font-bold tracking-tight">İyi Geceler, Can</h1>
+<p class="text-on-surface-variant font-body text-lg opacity-80">Hangi masalla rüyalara dalalım?</p>
+</section>
+<!-- Magic Action Button -->
+<section>
+<button class="w-full relative overflow-hidden group active:scale-95 transition-transform duration-200 p-8 rounded-xl bg-gradient-to-br from-primary-container to-primary flex flex-col items-center justify-center gap-4 shadow-[0_8px_32px_rgba(106,90,205,0.3)]">
+<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 pointer-events-none"></div>
+<div class="bg-white/20 p-4 rounded-full backdrop-blur-md">
+<span class="material-symbols-outlined text-4xl text-on-primary-container" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<span class="font-headline text-xl font-extrabold text-on-primary-container tracking-wide uppercase">Bu Geceki Masalı Üret</span>
+<div class="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
+<span class="material-symbols-outlined text-9xl text-white" data-icon="temp_night">mode_night</span>
+</div>
+</button>
+</section>
+<!-- Son Dinlenenler (Recently Played) -->
+<section class="space-y-4">
+<div class="flex justify-between items-end">
+<h2 class="font-headline text-xl font-bold text-on-surface">Son Dinlenenler</h2>
+<button class="text-primary font-medium text-sm hover:opacity-70 transition-opacity">Tümünü Gör</button>
+</div>
+<div class="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6">
+<!-- Card 1 -->
+<div class="flex-shrink-0 w-64 space-y-3">
+<div class="relative aspect-[4/5] rounded-lg overflow-hidden surface-container-high group">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A whimsical digital illustration of a sleepy moon resting on a soft blue cloud surrounded by twinkling golden stars in a deep navy sky" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB7mBNZDUIAW9gH1nL-2qXakl-TXRGVCxsGw4lZ8IDKvf3AArV1Sqx3ZIGyDUoLWURoTdeopfhWJxrj63v4zaK_zhreagvRUpcOrjIFOzBhPWoPFK4iKsZcjNYDm-ajy5gQ_EgLQL76wfLPCoX7g3axBw6oFZ_Kp4Hfsy20btWA_IIUUza09fANX6-5lSR0RQiFEWqkr5TuCdOreAAbJK-KMxqCcIACeE5pC18z8Cnnp62Hum5I8_8BUlji2-iEBo1EYkt23UF_gQ"/>
+<div class="absolute bottom-3 left-3 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5">
+<span class="material-symbols-outlined text-xs text-tertiary" data-icon="schedule" style="font-variation-settings: 'FILL' 1;">schedule</span>
+<span class="text-[10px] font-bold text-white uppercase tracking-wider">8 Dakika</span>
+</div>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface leading-tight">Uykucu Ay'ın Yolculuğu</h3>
+<p class="text-on-surface-variant text-sm font-medium opacity-60">Sakinleştirici • Uyku</p>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="flex-shrink-0 w-64 space-y-3">
+<div class="relative aspect-[4/5] rounded-lg overflow-hidden surface-container-high group">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="Digital storybook art of a small brave fox wearing a tiny green scarf walking through a glowing magical forest at night" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvBSiWRGaocAbc4xLmNN0AMelDm1erWjf-FTY-Mz3YaMQx_DhEEPGjaV9ZKR8x3mB3LHHkq7E6QiAS_BxABc0M716zAzqBw7sQbgWWhc4PTk1gcVEvJjHXRvOwVlDjgUVjGKFFT6IVmpemO2opg7kfFeQNX0HQQ1BvsNcitrTGtr4pmJrjEUA1dhGNML1_3DCFlKTPAQ-cPkf-Yxwq9n3tACsUzXw75isESqL57E3Zba0n8RWv3EabnU8Cwedot3LG5-Ju3jp9xw"/>
+<div class="absolute bottom-3 left-3 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5">
+<span class="material-symbols-outlined text-xs text-tertiary" data-icon="schedule" style="font-variation-settings: 'FILL' 1;">schedule</span>
+<span class="text-[10px] font-bold text-white uppercase tracking-wider">12 Dakika</span>
+</div>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg text-on-surface leading-tight">Cesur Tilki Ormanda</h3>
+<p class="text-on-surface-variant text-sm font-medium opacity-60">Macera • Eğitici</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Hızlı Beyaz Gürültü (White Noise) -->
+<section class="space-y-4">
+<h2 class="font-headline text-xl font-bold text-on-surface">Hızlı Beyaz Gürültü</h2>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+<!-- Rain -->
+<button class="flex items-center justify-between p-4 bg-surface-container rounded-lg hover:bg-surface-container-high transition-colors group">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-all">
+<span class="material-symbols-outlined" data-icon="water_drop">water_drop</span>
+</div>
+<div class="text-left">
+<p class="font-bold text-on-surface">Yağmur</p>
+<p class="text-xs text-on-surface-variant opacity-60">Dinlendirici Ses</p>
+</div>
+</div>
+<div class="w-10 h-6 bg-surface-variant rounded-full relative">
+<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+</div>
+</button>
+<!-- Fireplace -->
+<button class="flex items-center justify-between p-4 bg-surface-container rounded-lg hover:bg-surface-container-high transition-colors group">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:bg-tertiary group-hover:text-on-tertiary transition-all">
+<span class="material-symbols-outlined" data-icon="fireplace">fireplace</span>
+</div>
+<div class="text-left">
+<p class="font-bold text-on-surface">Şömine</p>
+<p class="text-xs text-on-surface-variant opacity-60">Sıcak Atmosfer</p>
+</div>
+</div>
+<div class="w-10 h-6 bg-primary rounded-full relative">
+<div class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+</div>
+</button>
+<!-- Ocean -->
+<button class="flex items-center justify-between p-4 bg-surface-container rounded-lg hover:bg-surface-container-high transition-colors group">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary group-hover:bg-secondary group-hover:text-on-secondary transition-all">
+<span class="material-symbols-outlined" data-icon="waves">waves</span>
+</div>
+<div class="text-left">
+<p class="font-bold text-on-surface">Okyanus</p>
+<p class="text-xs text-on-surface-variant opacity-60">Derin Dalgalar</p>
+</div>
+</div>
+<div class="w-10 h-6 bg-surface-variant rounded-full relative">
+<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+</div>
+</button>
+</div>
+</section>
+<!-- Bento Inspired Info Card -->
+<section class="pb-8">
+<div class="bg-surface-container-high/40 rounded-xl p-6 border border-white/5 flex items-center gap-6">
+<div class="flex-1 space-y-1">
+<p class="text-xs font-bold text-tertiary uppercase tracking-widest">Günün İpucu</p>
+<h4 class="font-headline text-lg font-bold text-on-surface">Uyku Zamanı Ritüeli</h4>
+<p class="text-sm text-on-surface-variant leading-relaxed">Masaldan 15 dakika önce beyaz gürültü açmak çocukların uykuya geçişini kolaylaştırır.</p>
+</div>
+<div class="hidden sm:block">
+<span class="material-symbols-outlined text-5xl text-primary opacity-40" data-icon="lightbulb">lightbulb</span>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-[#112036]/80 backdrop-blur-xl shadow-[0_-8px_24px_rgba(106,90,205,0.15)] rounded-t-[3rem]">
+<!-- Ana Sayfa (Active) -->
+<a class="flex flex-col items-center justify-center text-[#c8bfff] bg-[#1c2a41] rounded-2xl px-4 py-1 active:scale-90 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined text-2xl" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="font-['Manrope'] text-[10px] font-medium mt-1">Ana Sayfa</span>
+</a>
+<!-- Kitaplık -->
+<a class="flex flex-col items-center justify-center text-[#b9c7e4] opacity-60 hover:text-[#c8bfff] active:scale-90 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined text-2xl" data-icon="library_books">library_books</span>
+<span class="font-['Manrope'] text-[10px] font-medium mt-1">Kitaplık</span>
+</a>
+<!-- Ayarlar -->
+<a class="flex flex-col items-center justify-center text-[#b9c7e4] opacity-60 hover:text-[#c8bfff] active:scale-90 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined text-2xl" data-icon="settings">settings</span>
+<span class="font-['Manrope'] text-[10px] font-medium mt-1">Ayarlar</span>
+</a>
+</nav>
+</body></html>
