@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-container": "#abb9d6",
+              "inverse-surface": "#d6e3ff",
+              "on-tertiary": "#3a3000",
+              "on-primary-fixed": "#190064",
+              "on-error-container": "#ffdad6",
+              "outline-variant": "#474553",
+              "on-secondary": "#233148",
+              "on-error": "#690005",
+              "secondary": "#b9c7e4",
+              "primary": "#c8bfff",
+              "on-primary-container": "#f0ebff",
+              "error-container": "#93000a",
+              "secondary-container": "#3c4962",
+              "tertiary-fixed": "#ffe16d",
+              "on-background": "#d6e3ff",
+              "error": "#ffb4ab",
+              "surface-container-low": "#0d1c32",
+              "primary-container": "#6a5acd",
+              "tertiary-container": "#c9a900",
+              "surface-variant": "#27354c",
+              "inverse-on-surface": "#233148",
+              "tertiary": "#e9c400",
+              "on-surface": "#d6e3ff",
+              "inverse-primary": "#5d4cbf",
+              "surface-bright": "#2c3951",
+              "on-secondary-fixed": "#0d1c32",
+              "surface-tint": "#c8bfff",
+              "surface-container-lowest": "#010e24",
+              "secondary-fixed-dim": "#b9c7e4",
+              "on-secondary-fixed-variant": "#39475f",
+              "tertiary-fixed-dim": "#e9c400",
+              "surface-dim": "#041329",
+              "primary-fixed-dim": "#c8bfff",
+              "on-tertiary-fixed-variant": "#544600",
+              "on-tertiary-container": "#4c3f00",
+              "on-primary-fixed-variant": "#4532a6",
+              "secondary-fixed": "#d6e3ff",
+              "on-tertiary-fixed": "#221b00",
+              "on-surface-variant": "#c9c4d5",
+              "surface-container-high": "#1c2a41",
+              "surface": "#041329",
+              "primary-fixed": "#e5deff",
+              "outline": "#928f9e",
+              "surface-container-highest": "#27354c",
+              "on-primary": "#2d128f",
+              "surface-container": "#112036",
+              "background": "#041329"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(106, 90, 205, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body selection:bg-primary/30 min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-[#041329] flex items-center justify-between px-6 py-4">
+<button class="text-[#c8bfff] hover:opacity-80 transition-opacity active:scale-95 transition-transform">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-[#c8bfff]">Beyaz Gürültü</h1>
+<div class="w-6"></div> <!-- Spacer for centering -->
+</header>
+<main class="max-w-md mx-auto px-6 pt-8 space-y-12">
+<!-- Active Player Section -->
+<section class="flex flex-col items-center justify-center text-center space-y-8">
+<!-- Animated Sound Visualizer -->
+<div class="relative flex items-center justify-center">
+<!-- Glowing Rings -->
+<div class="absolute w-64 h-64 rounded-full bg-primary-container/20 blur-3xl animate-pulse"></div>
+<div class="absolute w-48 h-48 rounded-full border border-primary/20 animate-ping" style="animation-duration: 3s;"></div>
+<!-- Main Sound Icon/Image -->
+<div class="relative w-56 h-56 rounded-xl overflow-hidden shadow-[0_0_50px_rgba(200,191,255,0.2)]">
+<img class="w-full h-full object-cover" data-alt="Stylized illustration of soft rain clouds with gentle lavender lightning in a magical midnight sky background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAzOR_5mOipjr__762mAoYbMt-6-wRhuu0fkY_23IyUN5h9mDEzoARSQgF6XAcBmZYUEfdkM78Q9PDqDgGpYVhYZ1Mtovl39NJfSUHCmlaSa-m3rtvqMejhgw-D24X77fmNI7yMtHS5BmyGdZoOhukeQQ5MZkqkOi6tk632xZCu85dJU_NEAZzCW0o01r24OmYP8jFHAGC9To2RcVNKJm_dmzOv1nvDrHwFTTrB_NR-F_rmId0CD3-payg4hEg8Y_AD5vb064yaQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent opacity-60"></div>
+<div class="absolute bottom-4 left-0 right-0 flex justify-center">
+<span class="material-symbols-outlined text-tertiary text-4xl" data-weight="fill" style="font-variation-settings: 'FILL' 1;">rainy</span>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<h2 class="font-headline font-bold text-3xl tracking-tight text-primary">Yağmur</h2>
+<p class="text-secondary font-medium tracking-wide animate-pulse">Seslendiriliyor...</p>
+</div>
+</section>
+<!-- Controls Section -->
+<section class="space-y-8">
+<!-- Progress / Loop Bar -->
+<div class="space-y-3">
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden relative">
+<div class="absolute left-0 top-0 h-full w-2/3 bg-gradient-to-r from-primary-container to-primary rounded-full relative">
+<div class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-tertiary rounded-full shadow-[0_0_12px_#e9c400]"></div>
+</div>
+</div>
+<div class="flex justify-between text-[10px] font-bold text-secondary uppercase tracking-widest">
+<span>02:45</span>
+<span>Sürekli Döngü</span>
+</div>
+</div>
+<!-- Transport Controls -->
+<div class="flex items-center justify-center space-x-10">
+<button class="text-secondary hover:text-primary transition-colors active:scale-90 duration-200">
+<span class="material-symbols-outlined text-4xl">skip_previous</span>
+</button>
+<button class="w-20 h-20 rounded-full bg-gradient-to-br from-primary-container to-primary flex items-center justify-center shadow-[0_8px_24px_rgba(106,90,205,0.3)] active:scale-90 duration-200">
+<span class="material-symbols-outlined text-surface text-5xl" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+<button class="text-secondary hover:text-primary transition-colors active:scale-90 duration-200">
+<span class="material-symbols-outlined text-4xl">skip_next</span>
+</button>
+</div>
+</section>
+<!-- Playlist Section -->
+<section class="space-y-6 pb-12">
+<div class="flex items-center justify-between">
+<h3 class="font-headline font-bold text-xl text-on-surface">Çalma Listesi</h3>
+<span class="text-xs font-bold text-primary uppercase tracking-tighter">5 Parça</span>
+</div>
+<div class="grid grid-cols-1 gap-4">
+<!-- Yağmur (Active) -->
+<div class="p-4 rounded-xl flex items-center justify-between bg-primary-container/20 border border-primary/10 shadow-lg">
+<div class="flex items-center space-x-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">rainy</span>
+</div>
+<div>
+<p class="font-bold text-primary">Yağmur</p>
+<p class="text-xs text-secondary/70">Rahatlatıcı Doğa</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-tertiary">bar_chart</span>
+</div>
+<!-- Fırtına -->
+<div class="p-4 rounded-xl flex items-center justify-between bg-surface-container-high/40 hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center space-x-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">thunderstorm</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Fırtına</p>
+<p class="text-xs text-secondary/70">Derin Uyku</p>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center group-hover:bg-primary transition-colors">
+<span class="material-symbols-outlined text-sm text-primary group-hover:text-surface">play_arrow</span>
+</button>
+</div>
+<!-- Okyanus -->
+<div class="p-4 rounded-xl flex items-center justify-between bg-surface-container-high/40 hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center space-x-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">waves</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Okyanus</p>
+<p class="text-xs text-secondary/70">Ritmik Dalgalar</p>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center group-hover:bg-primary transition-colors">
+<span class="material-symbols-outlined text-sm text-primary group-hover:text-surface">play_arrow</span>
+</button>
+</div>
+<!-- Beyaz Gürültü -->
+<div class="p-4 rounded-xl flex items-center justify-between bg-surface-container-high/40 hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center space-x-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">blur_on</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Beyaz Gürültü</p>
+<p class="text-xs text-secondary/70">Statik Odak</p>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center group-hover:bg-primary transition-colors">
+<span class="material-symbols-outlined text-sm text-primary group-hover:text-surface">play_arrow</span>
+</button>
+</div>
+<!-- Anne Şşş -->
+<div class="p-4 rounded-xl flex items-center justify-between bg-surface-container-high/40 hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center space-x-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">record_voice_over</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Anne Şşş</p>
+<p class="text-xs text-secondary/70">Anne Karnı Sesi</p>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center group-hover:bg-primary transition-colors">
+<span class="material-symbols-outlined text-sm text-primary group-hover:text-surface">play_arrow</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-2 bg-[#112036]/80 backdrop-blur-xl rounded-t-[3rem] z-50 shadow-[0_-8px_24px_rgba(106,90,205,0.15)]">
+<a class="flex flex-col items-center justify-center text-[#b9c7e4] p-3 hover:text-[#c8bfff] transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="font-['Plus_Jakarta_Sans'] font-medium text-[10px] tracking-wide">Kitaplık</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#b9c7e4] p-3 hover:text-[#c8bfff] transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-['Plus_Jakarta_Sans'] font-medium text-[10px] tracking-wide">Keşfet</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#6A5ACD]/40 text-[#c8bfff] rounded-full p-3 transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">waves</span>
+<span class="font-['Plus_Jakarta_Sans'] font-medium text-[10px] tracking-wide">Beyaz Gürültü</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#b9c7e4] p-3 hover:text-[#c8bfff] transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Plus_Jakarta_Sans'] font-medium text-[10px] tracking-wide">Ayarlar</span>
+</a>
+</nav>
+</body></html>

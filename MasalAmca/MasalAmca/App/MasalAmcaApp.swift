@@ -12,6 +12,7 @@ struct MasalAmcaApp: App {
     @State private var childProfileManager = ChildProfileManager()
     @State private var subscriptionManager = SubscriptionManager()
     @State private var mixerEngine = MixerEngine()
+    @State private var mixerPinStore = MixerPinStore()
 
     private static let modelContainer: ModelContainer = {
         let schema = Schema([ChildProfile.self, Story.self, AppSyncState.self])
@@ -29,7 +30,7 @@ struct MasalAmcaApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(subscription: subscriptionManager, mixer: mixerEngine)
+            RootView(subscription: subscriptionManager, mixer: mixerEngine, pinStore: mixerPinStore)
                 .modelContainer(Self.modelContainer)
                 .masalThemeManager(themeManager)
                 .masalChildProfileManager(childProfileManager)

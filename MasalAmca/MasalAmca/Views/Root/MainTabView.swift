@@ -12,6 +12,7 @@ struct MainTabView: View {
     @Environment(\.masalChildProfileManager) private var profileManager
     @Bindable var subscription: SubscriptionManager
     @Bindable var mixer: MixerEngine
+    @Bindable var pinStore: MixerPinStore
 
     @State private var tab: MainTab = .home
 
@@ -21,9 +22,11 @@ struct MainTabView: View {
             Group {
                 switch tab {
                 case .home:
-                    HomeView(subscription: subscription, mixer: mixer, tabSelection: $tab)
+                    HomeView(subscription: subscription, mixer: mixer, pinStore: pinStore, tabSelection: $tab)
                 case .library:
                     LibraryView(subscription: subscription, mixer: mixer)
+                case .noise:
+                    WhiteNoisePlayerView(subscription: subscription, mixer: mixer, pinStore: pinStore)
                 case .settings:
                     SettingsView(subscription: subscription)
                 }

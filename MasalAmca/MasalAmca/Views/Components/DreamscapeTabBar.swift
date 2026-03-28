@@ -8,6 +8,7 @@ import SwiftUI
 enum MainTab: Int, CaseIterable, Identifiable {
     case home
     case library
+    case noise
     case settings
 
     var id: Int { rawValue }
@@ -16,6 +17,7 @@ enum MainTab: Int, CaseIterable, Identifiable {
         switch self {
         case .home: "Ana Sayfa"
         case .library: "Kitaplık"
+        case .noise: "Beyaz Gürültü"
         case .settings: "Ayarlar"
         }
     }
@@ -24,6 +26,7 @@ enum MainTab: Int, CaseIterable, Identifiable {
         switch self {
         case .home: "sparkles"
         case .library: "books.vertical"
+        case .noise: "waveform"
         case .settings: "gearshape"
         }
     }
@@ -49,9 +52,12 @@ struct DreamscapeTabBar: View {
                         Text(tab.title)
                             .font(MasalFont.labelMedium())
                             .fontWeight(isSelected ? .bold : .medium)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.78)
+                            .multilineTextAlignment(.center)
                     }
                     .foregroundStyle(isSelected ? c.primary : c.secondary.opacity(0.65))
-                    .padding(.horizontal, isSelected ? 18 : 12)
+                    .padding(.horizontal, isSelected ? 10 : 6)
                     .padding(.vertical, 8)
                     .background(
                         Group {

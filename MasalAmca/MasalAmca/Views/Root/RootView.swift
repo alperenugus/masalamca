@@ -17,11 +17,12 @@ struct RootView: View {
 
     @Bindable var subscription: SubscriptionManager
     @Bindable var mixer: MixerEngine
+    @Bindable var pinStore: MixerPinStore
 
     var body: some View {
         Group {
             if onboardingComplete {
-                MainTabView(subscription: subscription, mixer: mixer)
+                MainTabView(subscription: subscription, mixer: mixer, pinStore: pinStore)
             } else {
                 OnboardingView(subscription: subscription, isComplete: $onboardingComplete)
             }

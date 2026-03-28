@@ -40,6 +40,18 @@ enum MixerSound: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// Kısa açıklama; çalma listesi ve ana sayfa satırlarında kullanılır.
+    var playlistSubtitle: String {
+        switch self {
+        case .rain: "Rahatlatıcı Doğa"
+        case .fireplace: "Sıcak Atmosfer"
+        case .ocean: "Derin Dalgalar"
+        case .wind: "Hafif Esinti"
+        case .shush: "Sakinleştirici"
+        case .fan: "Sabit Akış"
+        }
+    }
+
     /// Free tier: first three (wiki)
     static var freeTier: [MixerSound] { [.rain, .ocean, .wind] }
 }
@@ -88,6 +100,13 @@ final class MixerEngine {
     func stopAll() {
         for s in MixerSound.allCases {
             setEnabled(s, on: false)
+        }
+    }
+
+    /// Yalnızca seçilen sesi açar; diğer katmanları kapatır (oyuncu sekmesi için).
+    func solo(_ sound: MixerSound) {
+        for s in MixerSound.allCases {
+            setEnabled(s, on: s == sound)
         }
     }
 

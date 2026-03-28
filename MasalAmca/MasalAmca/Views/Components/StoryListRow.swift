@@ -66,6 +66,8 @@ struct StoryListRow: View {
                 .font(.body.weight(.medium))
                 .foregroundStyle(c.secondary.opacity(0.4))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
         .padding(DesignTokens.Spacing.md)
     }
 }

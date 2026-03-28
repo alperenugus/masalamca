@@ -13,6 +13,7 @@ struct HomeView: View {
 
     @Bindable var subscription: SubscriptionManager
     @Bindable var mixer: MixerEngine
+    @Bindable var pinStore: MixerPinStore
     @Binding var tabSelection: MainTab
 
     @Query(sort: \Story.createdAt, order: .reverse) private var stories: [Story]
@@ -24,6 +25,7 @@ struct HomeView: View {
     @State private var showPaywall = false
     @State private var showNotificationsSheet = false
     @State private var storyAudio = AudioPlayerService()
+    @State private var randomQuickNoisePick: [MixerSound]?
 
     private let storyService = StoryService()
 
@@ -81,6 +83,27 @@ struct HomeView: View {
             NotificationsInfoSheet()
                 .masalThemeManager(theme)
                 .presentationDetents([.medium])
+        }
+        .onAppear {
+            ensureQuickNoisePick()
+        }
+        .onChange(of: pinStore.pinnedRawValues) { _, _ in
+            if pinStore.pinnedSounds.isEmpty {
+                randomQuickNoisePick = Array(MixerSound.allCases.shuffled().prefix(3))
+            } else {
+                randomQuickNoisePick = nil
+            }
+        }
+    }
+
+    /// Sabit yokken rastgele üçlü yalnızca ilk kez veya sabitler kaldırılınca yenilenir.
+    private func ensureQuickNoisePick() {
+        guard pinStore.pinnedSounds.isEmpty else {
+            randomQuickNoisePick = nil
+            return
+        }
+        if randomQuickNoisePick == nil {
+            randomQuickNoisePick = Array(MixerSound.allCases.shuffled().prefix(3))
         }
     }
 
@@ -268,13 +291,17 @@ struct HomeView: View {
         }
     }
 
+    private var quickNoiseSounds: [MixerSound] {
+        let pinned = pinStore.pinnedSounds
+        if !pinned.isEmpty {
+            return Array(pinned.prefix(3))
+        }
+        return randomQuickNoisePick ?? [.rain, .fireplace, .ocean]
+    }
+
     private var quickNoise: some View {
         let c = theme.colors
-        let quick: [(MixerSound, String, String)] = [
-            (.rain, "Yağmur", "Dinlendirici Ses"),
-            (.fireplace, "Şömine", "Sıcak Atmosfer"),
-            (.ocean, "Okyanus", "Derin Dalgalar")
-        ]
+        let sounds = quickNoiseSounds
         return VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Hızlı Beyaz Gürültü")
@@ -290,8 +317,8 @@ struct HomeView: View {
                 }
             }
             VStack(spacing: DesignTokens.Spacing.sm) {
-                ForEach(quick, id: \.0) { item in
-                    quickNoiseRow(sound: item.0, title: item.1, subtitle: item.2)
+                ForEach(sounds, id: \.self) { sound in
+                    quickNoiseRow(sound: sound, title: sound.displayTitle, subtitle: sound.playlistSubtitle)
                 }
             }
         }

@@ -58,8 +58,9 @@ struct LibraryView: View {
                     }
                 } header: {
                     sectionTitle("Son Dinlenenler")
+                        .padding(.horizontal, sideInset)
+                        .padding(.top, 4)
                 }
-                .listRowSeparator(.hidden)
             }
 
             if !older.isEmpty {
@@ -69,8 +70,9 @@ struct LibraryView: View {
                     }
                 } header: {
                     sectionTitle("Eski Masallar")
+                        .padding(.horizontal, sideInset)
+                        .padding(.top, 12)
                 }
-                .listRowSeparator(.hidden)
             }
 
             if filtered.isEmpty {
@@ -78,9 +80,11 @@ struct LibraryView: View {
                     Text("Masal bulunamadı.")
                         .font(MasalFont.bodyLarge())
                         .foregroundStyle(c.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .listRowInsets(EdgeInsets(top: 16, leading: sideInset, bottom: 16, trailing: sideInset))
                         .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
-                .listRowSeparator(.hidden)
             }
 
             Section {
@@ -91,6 +95,7 @@ struct LibraryView: View {
             }
         }
         .listStyle(.plain)
+        .listSectionSpacing(DesignTokens.Spacing.md)
         .scrollContentBackground(.hidden)
         .background(c.surface.ignoresSafeArea())
         .fullScreenCover(item: $playerPresentation, onDismiss: { storyAudio.stop() }) { wrap in
@@ -135,6 +140,8 @@ struct LibraryView: View {
 
     @ViewBuilder
     private func storyListRow(_ s: Story, active: ChildProfile?) -> some View {
+        let c = theme.colors
+        let sideInset = DesignTokens.Spacing.lg
         let playlist = playlistForProfile(active: active)
         Button {
             playerPresentation = PresentedStory(startStory: s, playlist: playlist)
@@ -148,10 +155,19 @@ struct LibraryView: View {
                 isFavorite: s.isFavorite,
                 onFavoriteToggle: { toggleFavorite(s) }
             )
+            .background(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                    .fill(c.surfaceContainer.opacity(0.45))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                    .strokeBorder(c.outlineVariant.opacity(0.12), lineWidth: 1)
+            }
         }
         .buttonStyle(.plain)
-        .listRowBackground(theme.colors.surfaceContainer)
-        .listRowInsets(EdgeInsets(top: 0, leading: DesignTokens.Spacing.lg, bottom: 0, trailing: DesignTokens.Spacing.lg))
+        .listRowInsets(EdgeInsets(top: 5, leading: sideInset, bottom: 5, trailing: sideInset))
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
                 deleteStory(s)
