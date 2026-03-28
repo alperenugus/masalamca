@@ -8,6 +8,6 @@ Follow-up work tracked for later. Check items off as you complete them.
 
 - [ ] **More voice options** — Expand voice picker / preferences; add more voices overall and more **premium** AI voice options (`StoryPreferences`, edge TTS config, voice list UI).
 
-- [ ] **Günün İpucu** — Add multiple tips and **randomly** pick which one to show on Home (currently static `tipCard` in `HomeView`).
+- [x] **Günün İpucu** — Add multiple tips and **randomly** pick which one to show on Home (currently static `tipCard` in `HomeView`).
 
 - [ ] **Notifications** — Rework `NotificationsInfoSheet` / scheduling UX and behavior (scope TBD when you start).

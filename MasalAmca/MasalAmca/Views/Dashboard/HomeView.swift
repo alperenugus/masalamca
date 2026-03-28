@@ -424,19 +424,20 @@ struct HomeView: View {
 
     private var tipCard: some View {
         let c = theme.colors
+        let tip = DailyTips.tipForToday()
         return HStack(alignment: .top, spacing: DesignTokens.Spacing.lg) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("GÜNÜN İPUCU")
                     .font(MasalFont.labelSmall())
                     .foregroundStyle(c.tertiary)
-                Text("Uyku Zamanı Ritüeli")
+                Text(tip.title)
                     .font(MasalFont.titleMedium())
                     .foregroundStyle(c.onSurface)
-                Text("Masaldan birkaç dakika önce beyaz gürültü açmak çocukların uykuya geçişini kolaylaştırır.")
+                Text(tip.message)
                     .font(MasalFont.bodyMedium())
                     .foregroundStyle(c.onSurfaceVariant)
             }
-            Image(systemName: "lightbulb.fill")
+            Image(systemName: tip.systemImage)
                 .font(.system(size: 40))
                 .foregroundStyle(c.primary.opacity(0.35))
         }
