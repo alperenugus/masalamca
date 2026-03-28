@@ -53,14 +53,12 @@ struct StorySettingsView: View {
     @State private var bento: StoryBentoTheme = .adventure
     @State private var autoStop: Bool = true
     @State private var backgroundMusic: Bool = true
-    @State private var saveSucceeded = false
     @State private var previewError: String?
     @State private var previewing: NarratorChoice?
     @State private var mp3PreviewPlayer: AVAudioPlayer?
 
     @State private var localPreview = LocalVoicePreview()
-
-    private let storyService = StoryService()
+    @State private var persistTask: Task<Void, Never>?
 
     var body: some View {
         let c = theme.colors
@@ -72,10 +70,6 @@ struct StorySettingsView: View {
                 narratorSection
                 bentoSection
                 extraSettingsSection
-                GradientButton("Ayarları Kaydet") {
-                    save(active: active)
-                }
-                .padding(.top, DesignTokens.Spacing.md)
             }
             .padding(.horizontal, DesignTokens.Spacing.lg)
             .padding(.top, DesignTokens.Spacing.md)
@@ -87,15 +81,22 @@ struct StorySettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(c.surface, for: .navigationBar)
         .onAppear {
-            let snap = StoryPreferences.load(for: active)
-            length = snap.length
-            narrator = snap.narrator
-            bento = snap.bento
-            autoStop = snap.autoStopAfterStory
-            backgroundMusic = snap.backgroundMusicInPlayer
+            applySnapshot(StoryPreferences.load(for: active))
             localPreview.onFinish = { previewing = nil }
         }
+        .onChange(of: profileManager.activeProfileID) { _, _ in
+            let a = profileManager.activeProfile(from: profiles)
+            applySnapshot(StoryPreferences.load(for: a))
+        }
+        .onChange(of: length) { _, _ in schedulePersistSnapshot() }
+        .onChange(of: narrator) { _, _ in schedulePersistSnapshot() }
+        .onChange(of: bento) { _, _ in schedulePersistSnapshot() }
+        .onChange(of: autoStop) { _, _ in schedulePersistSnapshot() }
+        .onChange(of: backgroundMusic) { _, _ in schedulePersistSnapshot() }
         .onDisappear {
+            persistTask?.cancel()
+            persistTask = nil
+            persistSnapshot()
             mp3PreviewPlayer?.stop()
             mp3PreviewPlayer = nil
             localPreview.stop()
@@ -108,7 +109,6 @@ struct StorySettingsView: View {
         } message: {
             Text(previewError ?? "")
         }
-        .sensoryFeedback(.success, trigger: saveSucceeded)
     }
 
     private var hero: some View {
@@ -307,23 +307,25 @@ struct StorySettingsView: View {
                 .foregroundStyle(c.secondary)
                 .padding(.horizontal, DesignTokens.Spacing.sm)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignTokens.Spacing.md) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignTokens.Spacing.sm) {
                 ForEach(StoryBentoTheme.allCases) { tile in
                     let on = bento == tile
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         bento = tile
                     } label: {
-                        VStack(spacing: DesignTokens.Spacing.md) {
+                        VStack(spacing: DesignTokens.Spacing.sm) {
                             Image(systemName: tile.systemImage)
-                                .font(.system(size: 36))
+                                .font(.system(size: 26))
                                 .foregroundStyle(on ? c.tertiary : c.secondary)
                             Text(tile.displayTitle)
-                                .font(MasalFont.titleMedium())
+                                .font(MasalFont.labelMedium())
+                                .fontWeight(.bold)
+                                .multilineTextAlignment(.center)
                                 .foregroundStyle(on ? c.onSurface : c.secondary)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, DesignTokens.Spacing.lg)
+                        .padding(.vertical, DesignTokens.Spacing.md)
                         .background(
                             RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
                                 .fill(on ? c.surfaceContainerHigh : c.surfaceContainerLow)
@@ -395,7 +397,25 @@ struct StorySettingsView: View {
         .padding(.vertical, DesignTokens.Spacing.md)
     }
 
-    private func save(active: ChildProfile?) {
+    private func applySnapshot(_ snap: StoryPreferences.Snapshot) {
+        length = snap.length
+        narrator = snap.narrator
+        bento = snap.bento
+        autoStop = snap.autoStopAfterStory
+        backgroundMusic = snap.backgroundMusicInPlayer
+    }
+
+    private func schedulePersistSnapshot() {
+        persistTask?.cancel()
+        persistTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            persistSnapshot()
+        }
+    }
+
+    private func persistSnapshot() {
+        guard let profile = profileManager.activeProfile(from: profiles) else { return }
         let snap = StoryPreferences.Snapshot(
             length: length,
             narrator: narrator,
@@ -403,26 +423,11 @@ struct StorySettingsView: View {
             autoStopAfterStory: autoStop,
             backgroundMusicInPlayer: backgroundMusic
         )
-        do {
-            try StoryPreferences.save(snap, profile: active, modelContext: modelContext)
-            saveSucceeded.toggle()
-        } catch {
-            previewError = error.localizedDescription
-        }
+        StoryPreferences.persist(snapshot: snap, to: profile, modelContext: modelContext)
     }
 
     private func togglePreview(for choice: NarratorChoice) async {
-        guard let voiceID = choice.resolvedVoiceID(), voiceID != "default" else {
-            if previewing == choice {
-                localPreview.stop()
-                previewing = nil
-            } else {
-                mp3PreviewPlayer?.stop()
-                previewing = choice
-                localPreview.speakSample()
-            }
-            return
-        }
+        guard choice.isSelectable else { return }
 
         if previewing == choice {
             mp3PreviewPlayer?.stop()
@@ -435,27 +440,21 @@ struct StorySettingsView: View {
         mp3PreviewPlayer?.stop()
         localPreview.stop()
 
-        guard AppConfiguration.proxyBaseURL != nil else {
+        if let url = BundledNarrationResources.audioFileURL(for: choice) {
             previewing = choice
-            localPreview.speakSample()
+            do {
+                mp3PreviewPlayer = try AVAudioPlayer(contentsOf: url)
+                mp3PreviewPlayer?.prepareToPlay()
+                try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+                mp3PreviewPlayer?.play()
+            } catch {
+                previewing = nil
+                previewError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            }
             return
         }
 
         previewing = choice
-        let token = AppConfiguration.proxyAuthToken
-        do {
-            let data = try await storyService.fetchSpeechAudio(
-                text: previewSampleText,
-                voiceID: voiceID,
-                authToken: token
-            )
-            mp3PreviewPlayer = try AVAudioPlayer(data: data)
-            mp3PreviewPlayer?.prepareToPlay()
-            try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            mp3PreviewPlayer?.play()
-        } catch {
-            previewing = nil
-            previewError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-        }
+        localPreview.speakSample()
     }
 }

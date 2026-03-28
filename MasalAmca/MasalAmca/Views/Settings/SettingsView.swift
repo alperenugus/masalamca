@@ -84,6 +84,24 @@ struct SettingsView: View {
                     Text("Hakkında")
                 }
                 .listRowBackground(c.surfaceContainer)
+
+                #if DEBUG
+                Section {
+                    Toggle(
+                        "Sahte Premium (yerel test)",
+                        isOn: Binding(
+                            get: { subscription.mockPremiumForLocalTesting },
+                            set: { subscription.mockPremiumForLocalTesting = $0 }
+                        )
+                    )
+                    Text("StoreKit olmadan tüm premium özellikleri dener; yalnızca DEBUG derlemelerde görünür.")
+                        .font(MasalFont.labelMedium())
+                        .foregroundStyle(c.onSurfaceVariant)
+                } header: {
+                    Text("Geliştirici")
+                }
+                .listRowBackground(c.surfaceContainer)
+                #endif
             }
             .scrollContentBackground(.hidden)
             .background(c.surface)

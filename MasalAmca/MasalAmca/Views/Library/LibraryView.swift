@@ -21,6 +21,7 @@ struct LibraryView: View {
     @State private var filter: LibraryFilter = .all
     @State private var playerPresentation: PresentedStory?
     @State private var storyAudio = AudioPlayerService()
+    @State private var readingStory: Story?
 
     private var df: DateFormatter {
         let f = DateFormatter()
@@ -101,6 +102,17 @@ struct LibraryView: View {
             )
             .masalThemeManager(theme)
         }
+        .fullScreenCover(isPresented: Binding(
+            get: { readingStory != nil },
+            set: { if !$0 { readingStory = nil } }
+        )) {
+            Group {
+                if let s = readingStory {
+                    StoryReadView(story: s, onFinish: { readingStory = nil })
+                        .masalThemeManager(theme)
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -139,6 +151,15 @@ struct LibraryView: View {
                 )
             }
             .tint(theme.colors.tertiary)
+        }
+        .contextMenu {
+            if !s.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button {
+                    readingStory = s
+                } label: {
+                    Label("Masalı Oku", systemImage: "book.fill")
+                }
+            }
         }
     }
 

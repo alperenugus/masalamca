@@ -18,6 +18,16 @@ final class ChildProfile {
     var createdAt: Date
     var updatedAt: Date
 
+    // MARK: - Masal ayarları (CloudKit ile senkron; üretimde kullanılır)
+    /// `StoryLengthPreference.rawValue`; boşsa orta uzunluk varsayılır.
+    var storyLengthRaw: String = ""
+    /// `NarratorChoice.rawValue`
+    var narratorRaw: String = ""
+    /// `StoryBentoTheme.rawValue`; boşsa `themes` üzerinden çıkarım.
+    var bentoThemeRaw: String = ""
+    var preferenceAutoStopAfterStory: Bool = true
+    var preferenceBackgroundMusic: Bool = true
+
     @Relationship(deleteRule: .cascade, inverse: \Story.profile)
     var stories: [Story]
 
@@ -39,6 +49,11 @@ final class ChildProfile {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.stories = stories
+        self.storyLengthRaw = StoryLengthPreference.medium.rawValue
+        self.narratorRaw = NarratorChoice.yumuşakBulut.rawValue
+        self.bentoThemeRaw = ""
+        self.preferenceAutoStopAfterStory = true
+        self.preferenceBackgroundMusic = true
     }
 
     var ageGroup: AgeGroup {

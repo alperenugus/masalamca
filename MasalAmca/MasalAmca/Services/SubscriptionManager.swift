@@ -6,26 +6,30 @@
 import Foundation
 import StoreKit
 import Observation
+import SwiftData
 
 @MainActor
 @Observable
 final class SubscriptionManager {
-    private enum Keys {
-        static let storiesGenerated = "masal_stories_generated_count"
-    }
+    #if DEBUG
+    /// Ayarlar → Geliştirici: yerel test için StoreKit olmadan premium kapıları.
+    static let mockPremiumUserDefaultsKey = "masal_debug_mock_premium"
+    #endif
 
     var products: [Product] = []
     var isPremium: Bool = false
-    var storiesGeneratedCount: Int {
-        didSet { UserDefaults.standard.set(storiesGeneratedCount, forKey: Keys.storiesGenerated) }
-    }
+    /// Ücretsiz kotayı CloudKit (`AppSyncState`) ile senkronlarız; `hydrateStoryCountFromCloud` ile doldurulur.
+    var storiesGeneratedCount: Int = 0
 
     private var updatesTask: Task<Void, Never>?
 
     init() {
-        storiesGeneratedCount = UserDefaults.standard.integer(forKey: Keys.storiesGenerated)
         updatesTask = Task { await listenForTransactions() }
         Task { await refreshEntitlements() }
+    }
+
+    func hydrateStoryCountFromCloud(_ count: Int) {
+        storiesGeneratedCount = count
     }
 
     func loadProducts() async {
@@ -40,6 +44,12 @@ final class SubscriptionManager {
     }
 
     func refreshEntitlements() async {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: Self.mockPremiumUserDefaultsKey) {
+            isPremium = true
+            return
+        }
+        #endif
         var premium = false
         for await result in Transaction.currentEntitlements {
             guard case .verified(let t) = result else { continue }
@@ -82,8 +92,9 @@ final class SubscriptionManager {
         isPremium || storiesGeneratedCount < 2
     }
 
-    func registerStoryGenerated() {
+    func registerStoryGenerated(modelContext: ModelContext) {
         storiesGeneratedCount += 1
+        AppSyncPersistence.persistStoryGenerationCount(storiesGeneratedCount, modelContext: modelContext)
     }
 
     func canUseSound(_ sound: MixerSound) -> Bool {
@@ -97,6 +108,14 @@ extension SubscriptionManager {
     func applyTestingState(premium: Bool, storiesGenerated: Int) {
         isPremium = premium
         storiesGeneratedCount = storiesGenerated
+    }
+
+    var mockPremiumForLocalTesting: Bool {
+        get { UserDefaults.standard.bool(forKey: Self.mockPremiumUserDefaultsKey) }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Self.mockPremiumUserDefaultsKey)
+            Task { await refreshEntitlements() }
+        }
     }
 }
 #endif

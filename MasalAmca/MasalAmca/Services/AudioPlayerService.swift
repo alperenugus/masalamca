@@ -7,6 +7,10 @@ import AVFoundation
 import MediaPlayer
 import Observation
 
+#if canImport(UIKit)
+import UIKit
+#endif
+
 @Observable
 @MainActor
 final class AudioPlayerService: NSObject {
@@ -16,6 +20,7 @@ final class AudioPlayerService: NSObject {
     private(set) var duration: TimeInterval = 0
 
     private var timer: Timer?
+    private var remoteCommandsWired = false
 
     /// Called when narration reaches natural end (e.g. crossfade into white noise).
     var onPlaybackFinished: (() -> Void)?
@@ -35,7 +40,21 @@ final class AudioPlayerService: NSObject {
         player = p
         duration = p.duration
         currentTime = 0
-        updateNowPlaying(title: title)
+        wireRemoteTransportIfNeeded()
+        publishFullNowPlayingInfo(title: title)
+    }
+
+    func load(data: Data, title: String = "Masal") throws {
+        stop()
+        nowPlayingTitle = title
+        let p = try AVAudioPlayer(data: data)
+        p.delegate = self
+        p.prepareToPlay()
+        player = p
+        duration = p.duration
+        currentTime = 0
+        wireRemoteTransportIfNeeded()
+        publishFullNowPlayingInfo(title: title)
     }
 
     func play() {
@@ -44,14 +63,14 @@ final class AudioPlayerService: NSObject {
         player?.play()
         isPlaying = true
         startTimer()
-        updateNowPlaying(title: nowPlayingTitle)
+        publishFullNowPlayingInfo(title: nowPlayingTitle)
     }
 
     func pause() {
         player?.pause()
         isPlaying = false
         stopTimer()
-        updateNowPlaying(title: nowPlayingTitle)
+        publishFullNowPlayingInfo(title: nowPlayingTitle)
     }
 
     func stop() {
@@ -61,14 +80,18 @@ final class AudioPlayerService: NSObject {
         currentTime = 0
         duration = 0
         stopTimer()
+        remoteCommandsWired = false
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        let center = MPRemoteCommandCenter.shared()
+        center.playCommand.removeTarget(nil)
+        center.pauseCommand.removeTarget(nil)
     }
 
     func seek(to time: TimeInterval) {
         guard let p = player else { return }
         p.currentTime = min(max(0, time), p.duration)
         currentTime = p.currentTime
-        updateNowPlaying(title: nowPlayingTitle)
+        publishFullNowPlayingInfo(title: nowPlayingTitle)
     }
 
     var progress: CGFloat {
@@ -80,8 +103,10 @@ final class AudioPlayerService: NSObject {
         stopTimer()
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                guard let self, let p = self.player else { return }
+                guard let self else { return }
+                guard let p = self.player else { return }
                 self.currentTime = p.currentTime
+                self.publishElapsedOnly()
             }
         }
     }
@@ -91,16 +116,22 @@ final class AudioPlayerService: NSObject {
         timer = nil
     }
 
-    private func updateNowPlaying(title: String, artist: String = "Masal Amca") {
-        var info = [String: Any]()
-        info[MPMediaItemPropertyTitle] = title
-        info[MPMediaItemPropertyArtist] = artist
-        info[MPMediaItemPropertyPlaybackDuration] = duration
-        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
-        info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    private static let nowPlayingArtwork: MPMediaItemArtwork? = {
+        #if canImport(UIKit)
+        guard let image = UIImage(named: "NowPlayingArtwork") else { return nil }
+        let size = CGSize(width: 512, height: 512)
+        return MPMediaItemArtwork(boundsSize: size) { _ in image }
+        #else
+        return nil
+        #endif
+    }()
 
+    private func wireRemoteTransportIfNeeded() {
+        guard !remoteCommandsWired else { return }
+        remoteCommandsWired = true
         let center = MPRemoteCommandCenter.shared()
+        center.playCommand.removeTarget(nil)
+        center.pauseCommand.removeTarget(nil)
         center.playCommand.isEnabled = true
         center.pauseCommand.isEnabled = true
         center.playCommand.addTarget { [weak self] _ in
@@ -112,6 +143,27 @@ final class AudioPlayerService: NSObject {
             return .success
         }
     }
+
+    private func publishFullNowPlayingInfo(title: String, artist: String = "Masal Amca") {
+        var info: [String: Any] = [
+            MPMediaItemPropertyTitle: title,
+            MPMediaItemPropertyArtist: artist,
+            MPMediaItemPropertyPlaybackDuration: duration,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0
+        ]
+        if let art = Self.nowPlayingArtwork {
+            info[MPMediaItemPropertyArtwork] = art
+        }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
+
+    private func publishElapsedOnly() {
+        guard var info = MPNowPlayingInfoCenter.default().nowPlayingInfo else { return }
+        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
+        info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
 }
 
 extension AudioPlayerService: AVAudioPlayerDelegate {
@@ -119,7 +171,7 @@ extension AudioPlayerService: AVAudioPlayerDelegate {
         Task { @MainActor in
             self.isPlaying = false
             self.stopTimer()
-            self.updateNowPlaying(title: self.nowPlayingTitle)
+            self.publishFullNowPlayingInfo(title: self.nowPlayingTitle)
             let cb = self.onPlaybackFinished
             self.onPlaybackFinished = nil
             cb?()

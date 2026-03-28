@@ -15,9 +15,9 @@ enum StoryLengthPreference: String, CaseIterable, Sendable {
 
     var displayTitle: String {
         switch self {
-        case .short: "Kısa (5 dk)"
-        case .medium: "Orta (10 dk)"
-        case .long: "Uzun (15+ dk)"
+        case .short: "Kısa (3 dk)"
+        case .medium: "Orta (5 dk)"
+        case .long: "Uzun (10 dk)"
         }
     }
 }
@@ -29,6 +29,12 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
     case nature
     case space
     case fairyTaleCastle
+    case ocean
+    case friendship
+    case dreams
+    case dinosaurs
+    case vehicles
+    case robots
 
     var id: String { rawValue }
 
@@ -38,6 +44,12 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
         case .nature: "Doğa"
         case .space: "Uzay"
         case .fairyTaleCastle: "Masal"
+        case .ocean: "Deniz"
+        case .friendship: "Arkadaşlık"
+        case .dreams: "Rüya"
+        case .dinosaurs: "Dinozor"
+        case .vehicles: "Araçlar"
+        case .robots: "Robot"
         }
     }
 
@@ -45,12 +57,17 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .adventure: "safari.fill"
         case .nature: "leaf.fill"
-        case .space: "rocket.fill"
+        case .space: "star.fill"
         case .fairyTaleCastle: "building.columns.fill"
+        case .ocean: "water.waves"
+        case .friendship: "heart.circle.fill"
+        case .dreams: "moon.zzz.fill"
+        case .dinosaurs: "lizard.fill"
+        case .vehicles: "car.fill"
+        case .robots: "gearshape.2.fill"
         }
     }
 
-    /// Sunucuya giden tema ipuçları (Türkçe, tek öğe).
     var apiThemeHints: [String] {
         switch self {
         case .adventure:
@@ -61,16 +78,28 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
             ["uzay, yıldızlar, gezegenler"]
         case .fairyTaleCastle:
             ["masal dünyası, krallık, sihir"]
+        case .ocean:
+            ["deniz, dalgalar, deniz canlıları, kumsal"]
+        case .friendship:
+            ["arkadaşlık, paylaşma, iş birliği, neşe"]
+        case .dreams:
+            ["rüyalar, yumuşak geçişler, hayal gücü, uyku"]
+        case .dinosaurs:
+            ["dinozorlar, tarih öncesi macera, merak (korku yok)"]
+        case .vehicles:
+            ["arabalar, trenler, yolculuk, keşif"]
+        case .robots:
+            ["robotlar, icat, teknoloji, yardımsever makineler"]
         }
     }
 
-    /// Onboarding `StoryTheme` ile uyum için profilde saklanan değerler.
     func asProfileThemes() -> [StoryTheme] {
         switch self {
-        case .adventure: [.magic]
-        case .nature: [.animals]
-        case .space: [.space]
-        case .fairyTaleCastle: [.fairyTale]
+        case .adventure, .dinosaurs, .vehicles: [.magic]
+        case .nature, .ocean: [.animals]
+        case .space, .robots: [.space]
+        case .fairyTaleCastle, .dreams: [.fairyTale]
+        case .friendship: [.magic, .fairyTale]
         }
     }
 
@@ -87,11 +116,8 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
 // MARK: - Anlatıcı
 
 enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
-    /// Kadın — Info.plist `ElevenLabsVoiceID`
     case yumuşakBulut
-    /// Erkek — sabit ID
     case bilgeDede
-    /// Üçüncü ses için ayrı ElevenLabs ID eklenince seçilebilir yapılabilir.
     case neşeliPeri
 
     var id: String { rawValue }
@@ -120,7 +146,6 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Erkek anlatıcı (ElevenLabs).
     static let bilgeDedeVoiceID = "NfwyWIJnRR1RrYnStGUG"
 
     var isSelectable: Bool {
@@ -146,7 +171,7 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-// MARK: - UserDefaults
+// MARK: - Çocuk profili + CloudKit (UserDefaults yalnızca geriye dönük okuma)
 
 enum StoryPreferences {
     enum Keys {
@@ -165,46 +190,113 @@ enum StoryPreferences {
         var backgroundMusicInPlayer: Bool
     }
 
+    /// Masal üretimi ve ayar ekranı: tercihler `ChildProfile` üzerinden (CloudKit).
     static func load(for profile: ChildProfile?) -> Snapshot {
-        let d = UserDefaults.standard
-        let length = d.string(forKey: Keys.length).flatMap(StoryLengthPreference.init(rawValue:)) ?? .medium
-        let storedNarrator = d.string(forKey: Keys.narrator).flatMap(NarratorChoice.init(rawValue:)) ?? .yumuşakBulut
-        let narrator = storedNarrator.isSelectable ? storedNarrator : .yumuşakBulut
-        let bento: StoryBentoTheme
-        if let raw = d.string(forKey: Keys.bentoTheme), let t = StoryBentoTheme(rawValue: raw) {
-            bento = t
-        } else {
-            bento = StoryBentoTheme.inferred(from: profile?.themes.first)
+        guard let profile else {
+            return legacySnapshotFromUserDefaults()
         }
-        let autoStop = d.object(forKey: Keys.autoStopAfterStory) as? Bool ?? true
-        let bgMusic = d.object(forKey: Keys.backgroundMusicInPlayer) as? Bool ?? true
+
+        let d = UserDefaults.standard
+
+        let length: StoryLengthPreference = {
+            if !profile.storyLengthRaw.isEmpty, let l = StoryLengthPreference(rawValue: profile.storyLengthRaw) {
+                return l
+            }
+            if let s = d.string(forKey: Keys.length), let l = StoryLengthPreference(rawValue: s) {
+                return l
+            }
+            return .medium
+        }()
+
+        let narrator: NarratorChoice = {
+            if !profile.narratorRaw.isEmpty, let n = NarratorChoice(rawValue: profile.narratorRaw), n.isSelectable {
+                return n
+            }
+            if let s = d.string(forKey: Keys.narrator), let n = NarratorChoice(rawValue: s), n.isSelectable {
+                return n
+            }
+            return .yumuşakBulut
+        }()
+
+        let bento: StoryBentoTheme = {
+            if !profile.bentoThemeRaw.isEmpty, let t = StoryBentoTheme(rawValue: profile.bentoThemeRaw) {
+                return t
+            }
+            if let s = d.string(forKey: Keys.bentoTheme), let t = StoryBentoTheme(rawValue: s) {
+                return t
+            }
+            return StoryBentoTheme.inferred(from: profile.themes.first)
+        }()
+
+        let autoStop: Bool = {
+            if d.object(forKey: Keys.autoStopAfterStory) != nil {
+                return d.object(forKey: Keys.autoStopAfterStory) as? Bool ?? true
+            }
+            return profile.preferenceAutoStopAfterStory
+        }()
+
+        let bgMusic: Bool = {
+            if d.object(forKey: Keys.backgroundMusicInPlayer) != nil {
+                return d.object(forKey: Keys.backgroundMusicInPlayer) as? Bool ?? true
+            }
+            return profile.preferenceBackgroundMusic
+        }()
+
         return Snapshot(
             length: length,
-            narrator: narrator.isSelectable ? narrator : .yumuşakBulut,
+            narrator: narrator,
             bento: bento,
             autoStopAfterStory: autoStop,
             backgroundMusicInPlayer: bgMusic
         )
     }
 
-    static func save(_ snapshot: Snapshot, profile: ChildProfile?, modelContext: ModelContext?) throws {
+    /// Ayarlar değişince çağır; CloudKit ile senkronlanır.
+    @MainActor
+    static func persist(snapshot: Snapshot, to profile: ChildProfile, modelContext: ModelContext) {
+        profile.storyLengthRaw = snapshot.length.rawValue
+        profile.narratorRaw = snapshot.narrator.rawValue
+        profile.bentoThemeRaw = snapshot.bento.rawValue
+        profile.preferenceAutoStopAfterStory = snapshot.autoStopAfterStory
+        profile.preferenceBackgroundMusic = snapshot.backgroundMusicInPlayer
+        profile.themes = snapshot.bento.asProfileThemes()
+        profile.updatedAt = .now
         let d = UserDefaults.standard
-        d.set(snapshot.length.rawValue, forKey: Keys.length)
-        d.set(snapshot.narrator.rawValue, forKey: Keys.narrator)
-        d.set(snapshot.bento.rawValue, forKey: Keys.bentoTheme)
         d.set(snapshot.autoStopAfterStory, forKey: Keys.autoStopAfterStory)
         d.set(snapshot.backgroundMusicInPlayer, forKey: Keys.backgroundMusicInPlayer)
-
-        if let profile, let modelContext {
-            profile.themes = snapshot.bento.asProfileThemes()
-            profile.updatedAt = .now
-            try modelContext.save()
-        }
+        d.removeObject(forKey: Keys.length)
+        d.removeObject(forKey: Keys.narrator)
+        d.removeObject(forKey: Keys.bentoTheme)
+        try? modelContext.save()
     }
 
-    static func resolvedVoiceID() -> String {
-        let snap = load(for: nil)
-        return snap.narrator.resolvedVoiceID() ?? defaultFemaleVoiceID()
+    /// Oynatıcı ve `UserDefaults` okuyan kodlar için; profil tercihlerini yansıt.
+    static func mirrorPlaybackPreferencesToUserDefaults(for profile: ChildProfile?) {
+        let snap = load(for: profile)
+        let d = UserDefaults.standard
+        d.set(snap.autoStopAfterStory, forKey: Keys.autoStopAfterStory)
+        d.set(snap.backgroundMusicInPlayer, forKey: Keys.backgroundMusicInPlayer)
+    }
+
+    private static func legacySnapshotFromUserDefaults() -> Snapshot {
+        let d = UserDefaults.standard
+        let length = d.string(forKey: Keys.length).flatMap(StoryLengthPreference.init(rawValue:)) ?? .medium
+        let stored = d.string(forKey: Keys.narrator).flatMap(NarratorChoice.init(rawValue:)) ?? .yumuşakBulut
+        let narrator = stored.isSelectable ? stored : .yumuşakBulut
+        let bento: StoryBentoTheme
+        if let raw = d.string(forKey: Keys.bentoTheme), let t = StoryBentoTheme(rawValue: raw) {
+            bento = t
+        } else {
+            bento = .adventure
+        }
+        let autoStop = d.object(forKey: Keys.autoStopAfterStory) as? Bool ?? true
+        let bgMusic = d.object(forKey: Keys.backgroundMusicInPlayer) as? Bool ?? true
+        return Snapshot(length: length, narrator: narrator, bento: bento, autoStopAfterStory: autoStop, backgroundMusicInPlayer: bgMusic)
+    }
+
+    static func resolvedVoiceID(for profile: ChildProfile?) -> String {
+        let snap = load(for: profile)
+        return snap.narrator.resolvedVoiceID() ?? NarratorChoice.defaultFemaleVoiceID()
     }
 
     static func defaultFemaleVoiceID() -> String {

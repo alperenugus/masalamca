@@ -18,7 +18,7 @@ struct OnboardingView: View {
 
     @State private var childName = ""
     @State private var ageGroup: AgeGroup = .twoToFour
-    @State private var selectedThemes: Set<StoryTheme> = []
+    @State private var selectedBento: StoryBentoTheme = .adventure
 
     var body: some View {
         let c = theme.colors
@@ -78,21 +78,44 @@ struct OnboardingView: View {
                         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous))
                     }
 
-                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
-                        Text("Favori Temalar")
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                        Text("Hikaye Teması")
                             .font(MasalFont.bodyMedium())
                             .fontWeight(.semibold)
                             .foregroundStyle(c.secondary)
-                        FlowLayout(spacing: 8) {
-                            ForEach(StoryTheme.allCases, id: \.self) { t in
-                                GenreChip(
-                                    title: t.displayName,
-                                    systemImageName: t.iconSystemName,
-                                    isSelected: selectedThemes.contains(t)
-                                ) {
-                                    if selectedThemes.contains(t) { selectedThemes.remove(t) }
-                                    else { selectedThemes.insert(t) }
+                        Text("Masal Ayarları ile aynı temalar; masallar bu atmosfere göre şekillenir.")
+                            .font(MasalFont.labelMedium())
+                            .foregroundStyle(c.onSurfaceVariant.opacity(0.85))
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignTokens.Spacing.sm) {
+                            ForEach(StoryBentoTheme.allCases) { tile in
+                                let on = selectedBento == tile
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    selectedBento = tile
+                                } label: {
+                                    VStack(spacing: DesignTokens.Spacing.sm) {
+                                        Image(systemName: tile.systemImage)
+                                            .font(.system(size: 26))
+                                            .foregroundStyle(on ? c.tertiary : c.secondary)
+                                        Text(tile.displayTitle)
+                                            .font(MasalFont.labelMedium())
+                                            .fontWeight(.bold)
+                                            .multilineTextAlignment(.center)
+                                            .foregroundStyle(on ? c.onSurface : c.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, DesignTokens.Spacing.md)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                                            .fill(on ? c.surfaceContainerHigh : c.surfaceContainerLow)
+                                    )
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                                            .strokeBorder(on ? c.primary.opacity(0.35) : Color.clear, lineWidth: 1)
+                                    }
                                 }
+                                .buttonStyle(.plain)
+                                .opacity(on ? 1 : 0.72)
                             }
                         }
                     }
@@ -122,52 +145,16 @@ struct OnboardingView: View {
     }
 
     private func saveProfile() {
-        let themes = Array(selectedThemes).sorted { $0.rawValue < $1.rawValue }
+        let bento = selectedBento
+        let themes = bento.asProfileThemes()
         let profile = ChildProfile(
             name: childName.trimmingCharacters(in: .whitespacesAndNewlines),
             ageGroup: ageGroup,
             themes: themes.isEmpty ? [.fairyTale] : themes
         )
+        profile.bentoThemeRaw = bento.rawValue
         modelContext.insert(profile)
         profileManager.switchTo(profile)
         try? modelContext.save()
-    }
-}
-
-/// Simple wrapping flow for chips.
-private struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = arrange(proposal: proposal, subviews: subviews)
-        return result.size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = arrange(proposal: proposal, subviews: subviews)
-        for (i, pos) in result.positions.enumerated() {
-            subviews[i].place(at: CGPoint(x: bounds.minX + pos.x, y: bounds.minY + pos.y), proposal: .unspecified)
-        }
-    }
-
-    private func arrange(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        var maxWidth = proposal.width ?? .infinity
-        var positions: [CGPoint] = []
-        for sub in subviews {
-            let size = sub.sizeThatFits(.unspecified)
-            if x + size.width > maxWidth, x > 0 {
-                x = 0
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            positions.append(CGPoint(x: x, y: y))
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-        let height = y + rowHeight
-        return (CGSize(width: maxWidth, height: height), positions)
     }
 }

@@ -13,6 +13,8 @@ final class Story {
     var body: String
     var durationSeconds: Int
     var audioFileName: String?
+    /// CloudKit senkronu için ses verisi (yerel dosyadan öncelikli yüklenir).
+    @Attribute(.externalStorage) var audioBlob: Data?
     var isFavorite: Bool
     var genreRaw: String
     var generationModel: String
@@ -26,6 +28,7 @@ final class Story {
         body: String,
         durationSeconds: Int = 0,
         audioFileName: String? = nil,
+        audioBlob: Data? = nil,
         isFavorite: Bool = false,
         genre: StoryGenre = .calming,
         generationModel: String = "",
@@ -37,6 +40,7 @@ final class Story {
         self.body = body
         self.durationSeconds = durationSeconds
         self.audioFileName = audioFileName
+        self.audioBlob = audioBlob
         self.isFavorite = isFavorite
         self.genreRaw = genre.rawValue
         self.generationModel = generationModel

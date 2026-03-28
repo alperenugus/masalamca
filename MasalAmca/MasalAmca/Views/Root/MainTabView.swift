@@ -3,10 +3,13 @@
 //  MasalAmca
 //
 
+import SwiftData
 import SwiftUI
 
 struct MainTabView: View {
     @Environment(\.masalThemeManager) private var theme
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.masalChildProfileManager) private var profileManager
     @Bindable var subscription: SubscriptionManager
     @Bindable var mixer: MixerEngine
 
@@ -30,5 +33,11 @@ struct MainTabView: View {
             DreamscapeTabBar(selection: $tab)
         }
         .background(c.surface.ignoresSafeArea())
+        .task {
+            AppSyncPersistence.persistActiveProfileID(profileManager.activeProfileID, modelContext: modelContext)
+        }
+        .onChange(of: profileManager.activeProfileID) { _, new in
+            AppSyncPersistence.persistActiveProfileID(new, modelContext: modelContext)
+        }
     }
 }

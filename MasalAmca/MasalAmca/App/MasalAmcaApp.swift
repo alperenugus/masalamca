@@ -14,7 +14,7 @@ struct MasalAmcaApp: App {
     @State private var mixerEngine = MixerEngine()
 
     private static let modelContainer: ModelContainer = {
-        let schema = Schema([ChildProfile.self, Story.self])
+        let schema = Schema([ChildProfile.self, Story.self, AppSyncState.self])
         let cloud = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .automatic)
         if let container = try? ModelContainer(for: schema, configurations: [cloud]) {
             return container

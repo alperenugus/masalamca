@@ -2,8 +2,9 @@
 //  StoryPlayerView.swift
 //  MasalAmca
 //
+//  Layout: DesignProposal/story_player_with_playlist_compact_mixer + story_player_mixer_open
+//
 
-import Combine
 import SwiftData
 import SwiftUI
 
@@ -18,11 +19,11 @@ struct StoryPlayerView: View {
     let playlist: [Story]
     @State private var activeStory: Story
 
-    @State private var mixerSheet = false
+    @State private var showMixerPanel = false
     @State private var sleepTimer = SleepTimerController()
     @State private var hasPlayableAudio = false
     @State private var appliedBackgroundMusicPreset = false
-    private let sessionTicker = Timer.publish(every: 0.75, on: .main, in: .common).autoconnect()
+    @State private var showStoryRead = false
 
     init(
         audio: AudioPlayerService,
@@ -40,53 +41,69 @@ struct StoryPlayerView: View {
 
     var body: some View {
         let c = theme.colors
-        ScrollView {
-            VStack(spacing: DesignTokens.Spacing.xl) {
-                header
-                hero
-                titles
-                if hasPlayableAudio {
-                    VoiceVisualizerView(isActive: audio.isPlaying)
-                    progressSection
-                    controls
-                } else {
-                    textOnlySection
+        ZStack(alignment: .bottom) {
+            LinearGradient(
+                colors: [
+                    c.surface.opacity(0.92),
+                    c.surfaceContainer.opacity(0.98)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: DesignTokens.Spacing.lg) {
+                    header
+                    hero
+                    titles
+                    if hasPlayableAudio {
+                        VoiceVisualizerView(isActive: audio.isPlaying)
+                        progressSection
+                        controls
+                    } else {
+                        textOnlySection
+                    }
+                    playlistSection
                 }
-                playlistSection
+                .padding(.horizontal, DesignTokens.Spacing.lg)
+                .padding(.bottom, showMixerPanel ? 12 : 48)
             }
-            .padding(.horizontal, DesignTokens.Spacing.lg)
-            .padding(.bottom, 48)
+            .scrollIndicators(.hidden)
+
+            if showMixerPanel {
+                Color.black.opacity(0.42)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                            showMixerPanel = false
+                        }
+                    }
+                    .transition(.opacity)
+
+                floatingMixerPanel
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
-        .scrollIndicators(.hidden)
-        .background(c.surface.ignoresSafeArea())
+        .animation(.spring(response: 0.34, dampingFraction: 0.88), value: showMixerPanel)
         .task(id: activeStory.id) {
+            StoryPreferences.mirrorPlaybackPreferencesToUserDefaults(for: activeStory.profile)
             await loadAudioIfNeeded()
             applyBackgroundMusicIfNeeded()
-            await pushPlaybackToWidgetAndLiveActivity()
         }
         .onAppear {
-            audio.onPlaybackFinished = { [mixer] in
-                if StoryPreferences.autoStopAfterStoryEnds {
-                    mixer.stopAll()
-                } else {
-                    mixer.fadeInAllEnabled(duration: 5)
-                }
-            }
-        }
-        .onReceive(sessionTicker) { _ in
-            Task { await pushPlaybackToWidgetAndLiveActivity() }
-        }
-        .onChange(of: audio.isPlaying) { _, _ in
-            Task { await pushPlaybackToWidgetAndLiveActivity() }
-        }
-        .onChange(of: hasPlayableAudio) { _, _ in
-            Task { await pushPlaybackToWidgetAndLiveActivity() }
-        }
-        .onChange(of: sleepTimer.sleepTimerEndDate) { _, _ in
-            Task { await pushPlaybackToWidgetAndLiveActivity() }
+            wirePlaybackFinishedHandler()
         }
         .onChange(of: activeStory.id) { _, _ in
+            wirePlaybackFinishedHandler()
             appliedBackgroundMusicPreset = false
+        }
+        .fullScreenCover(isPresented: $showStoryRead) {
+            StoryReadView(story: activeStory, onFinish: { showStoryRead = false })
+                .masalThemeManager(theme)
+        }
+        .onChange(of: showStoryRead) { _, isReading in
+            if isReading { audio.pause() }
         }
         .onDisappear {
             appliedBackgroundMusicPreset = false
@@ -96,114 +113,175 @@ struct StoryPlayerView: View {
                 await PlaybackSessionSync.endSession()
             }
             audio.pause()
+            mixer.stopAll()
         }
-        .sheet(isPresented: $mixerSheet) {
+    }
+
+    private var floatingMixerPanel: some View {
+        let c = theme.colors
+        return VStack(spacing: 0) {
+            Capsule()
+                .fill(c.outlineVariant.opacity(0.35))
+                .frame(width: 48, height: 4)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+
             WhiteNoiseMixerView(
                 mixer: mixer,
                 subscription: subscription,
-                onCollapse: { mixerSheet = false }
+                onCollapse: {
+                    withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                        showMixerPanel = false
+                    }
+                },
+                showGlassHandle: false,
+                embedsInStoryPlayerPanel: true
             )
-            .padding(.top, DesignTokens.Spacing.md)
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .masalThemeManager(theme)
         }
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .padding(.bottom, 10)
+        .background {
+            ZStack {
+                UnevenRoundedRectangle(
+                    topLeadingRadius: DesignTokens.Radius.lg,
+                    bottomLeadingRadius: 0,
+                    bottomTrailingRadius: 0,
+                    topTrailingRadius: DesignTokens.Radius.lg,
+                    style: .continuous
+                )
+                .fill(c.surfaceContainer.opacity(0.82))
+                UnevenRoundedRectangle(
+                    topLeadingRadius: DesignTokens.Radius.lg,
+                    bottomLeadingRadius: 0,
+                    bottomTrailingRadius: 0,
+                    topTrailingRadius: DesignTokens.Radius.lg,
+                    style: .continuous
+                )
+                .stroke(c.outlineVariant.opacity(0.14), lineWidth: 1)
+            }
+        }
+        .background(.ultraThinMaterial, in: UnevenRoundedRectangle(
+            topLeadingRadius: DesignTokens.Radius.lg,
+            bottomLeadingRadius: 0,
+            bottomTrailingRadius: 0,
+            topTrailingRadius: DesignTokens.Radius.lg,
+            style: .continuous
+        ))
+        .shadow(color: .black.opacity(0.35), radius: 24, x: 0, y: -8)
     }
 
     private var header: some View {
         let c = theme.colors
-        return HStack {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(c.primary)
+        return ZStack {
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(c.primary)
+                        .frame(width: 40, height: 40)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                HStack(spacing: 10) {
+                    if hasReadableBody {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            showStoryRead = true
+                        } label: {
+                            Image(systemName: "book.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(c.primary)
+                                .frame(width: 34, height: 34)
+                                .background(c.surfaceContainerHigh)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Masalı oku")
+                    }
+
+                    Menu {
+                        Button("3 dakika") {
+                            sleepTimer.start(minutes: 3) {
+                                audio.pause()
+                                mixer.stopAll()
+                            }
+                        }
+                        Button("5 dakika") {
+                            sleepTimer.start(minutes: 5) {
+                                audio.pause()
+                                mixer.stopAll()
+                            }
+                        }
+                        Button("10 dakika") {
+                            sleepTimer.start(minutes: 10) {
+                                audio.pause()
+                                mixer.stopAll()
+                            }
+                        }
+                        Button("Zamanlayıcıyı iptal et") { sleepTimer.cancel() }
+                    } label: {
+                        Image(systemName: "moon.zzz.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(c.primary)
+                            .frame(width: 34, height: 34)
+                            .background(c.surfaceContainerHigh)
+                            .clipShape(Circle())
+                    }
+                    .accessibilityLabel("Uyku zamanlayıcısı")
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                            showMixerPanel.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(c.primary)
+                            .frame(width: 34, height: 34)
+                            .background(c.surfaceContainerHigh)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Beyaz gürültü mikseri")
+                }
             }
-            Spacer()
+
             Text("Masal Amca")
                 .font(MasalFont.titleMedium())
                 .foregroundStyle(c.primary)
-            Spacer()
-            HStack(spacing: DesignTokens.Spacing.sm) {
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    mixerSheet = true
-                } label: {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.title3)
-                        .foregroundStyle(c.primary)
-                        .frame(width: 44, height: 44)
-                        .background(c.surfaceContainerHigh)
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Beyaz gürültü mikseri")
-
-                Menu {
-                    Button {
-                        activeStory.isFavorite.toggle()
-                        try? modelContext.save()
-                    } label: {
-                        Label(
-                            activeStory.isFavorite ? "Favoriden Çıkar" : "Favorilere Ekle",
-                            systemImage: activeStory.isFavorite ? "star.slash" : "star.fill"
-                        )
-                    }
-                    Button("15 dakika") {
-                        sleepTimer.start(minutes: 15) {
-                            audio.pause()
-                            mixer.stopAll()
-                        }
-                    }
-                    Button("30 dakika") {
-                        sleepTimer.start(minutes: 30) {
-                            audio.pause()
-                            mixer.stopAll()
-                        }
-                    }
-                    Button("45 dakika") {
-                        sleepTimer.start(minutes: 45) {
-                            audio.pause()
-                            mixer.stopAll()
-                        }
-                    }
-                    Button("60 dakika") {
-                        sleepTimer.start(minutes: 60) {
-                            audio.pause()
-                            mixer.stopAll()
-                        }
-                    }
-                    Button("Zamanlayıcıyı iptal et") { sleepTimer.cancel() }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.title3)
-                        .foregroundStyle(c.primary)
-                        .frame(width: 44, height: 44)
-                }
-            }
         }
         .padding(.top, 8)
     }
 
     private var hero: some View {
         let c = theme.colors
-        return ZStack(alignment: .bottom) {
-            RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous)
-                .fill(c.surfaceContainerHigh)
-                .aspectRatio(1, contentMode: .fit)
-                .overlay {
-                    Image(systemName: "moon.stars.fill")
-                        .font(.system(size: 72, weight: .light))
-                        .foregroundStyle(c.primary.opacity(0.45))
-                }
-                .shadow(color: c.surface.opacity(0.5), radius: 24, x: 0, y: 12)
-            LinearGradient(
-                colors: [c.surface.opacity(0.9), .clear],
-                startPoint: .bottom,
-                endPoint: .top
-            )
-            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous))
+        let side: CGFloat = 152
+        return HStack {
+            Spacer(minLength: 0)
+            ZStack(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                    .fill(c.surfaceContainerHigh)
+                    .frame(width: side, height: side)
+                    .overlay {
+                        Image(systemName: "moon.stars.fill")
+                            .font(.system(size: 44, weight: .light))
+                            .foregroundStyle(c.primary.opacity(0.45))
+                    }
+                    .shadow(color: c.surface.opacity(0.45), radius: 16, x: 0, y: 8)
+                LinearGradient(
+                    colors: [c.surface.opacity(0.88), .clear],
+                    startPoint: .bottom,
+                    endPoint: .top
+                )
+                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous))
+                .frame(width: side, height: side)
+            }
+            Spacer(minLength: 0)
         }
     }
 
@@ -217,7 +295,28 @@ struct StoryPlayerView: View {
             Text("Seslendiren: Masal Amca • \(max(1, activeStory.durationSeconds / 60)) Dakika")
                 .font(MasalFont.bodyMedium())
                 .foregroundStyle(c.secondary.opacity(0.85))
+            if hasReadableBody {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showStoryRead = true
+                } label: {
+                    Text("Metni kendim oku")
+                        .font(MasalFont.labelMedium())
+                        .fontWeight(.semibold)
+                        .foregroundStyle(c.primary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(c.primary.opacity(0.14))
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
         }
+    }
+
+    private var hasReadableBody: Bool {
+        !activeStory.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private var progressSection: some View {
@@ -241,21 +340,30 @@ struct StoryPlayerView: View {
 
     private var controls: some View {
         let c = theme.colors
-        return HStack(spacing: 48) {
+        return HStack(spacing: 40) {
             Button {
                 audio.seek(to: max(0, audio.currentTime - 10))
             } label: {
                 Image(systemName: "gobackward.10")
-                    .font(.system(size: 32))
+                    .font(.system(size: 28))
                     .foregroundStyle(c.secondary)
             }
+            .accessibilityLabel("On saniye geri")
+
             Button {
-                if audio.isPlaying { audio.pause() } else { audio.play() }
+                if audio.isPlaying {
+                    audio.pause()
+                    mixer.stopAll()
+                    appliedBackgroundMusicPreset = false
+                } else {
+                    audio.play()
+                    applyBackgroundMusicIfNeeded()
+                }
             } label: {
                 Image(systemName: audio.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 44))
+                    .font(.system(size: 40))
                     .foregroundStyle(c.onPrimaryContainer)
-                    .frame(width: 80, height: 80)
+                    .frame(width: 76, height: 76)
                     .background(
                         LinearGradient(
                             colors: [c.primaryContainer, c.primary],
@@ -266,13 +374,16 @@ struct StoryPlayerView: View {
                     .clipShape(Circle())
                     .shadow(color: c.ctaShadow, radius: 12, x: 0, y: 6)
             }
+            .accessibilityLabel(audio.isPlaying ? "Duraklat" : "Oynat")
+
             Button {
-                audio.seek(to: min(audio.duration, audio.currentTime + 30))
+                audio.seek(to: min(audio.duration, audio.currentTime + 10))
             } label: {
-                Image(systemName: "goforward.30")
-                    .font(.system(size: 32))
+                Image(systemName: "goforward.10")
+                    .font(.system(size: 28))
                     .foregroundStyle(c.secondary)
             }
+            .accessibilityLabel("On saniye ileri")
         }
     }
 
@@ -400,6 +511,16 @@ struct StoryPlayerView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous))
     }
 
+    private func wirePlaybackFinishedHandler() {
+        audio.onPlaybackFinished = { [mixer] in
+            if StoryPreferences.autoStopAfterStoryEnds {
+                mixer.stopAll()
+            } else {
+                mixer.fadeInAllEnabled(duration: 5)
+            }
+        }
+    }
+
     @MainActor
     private func applyBackgroundMusicIfNeeded() {
         guard StoryPreferences.backgroundMusicDuringStory, !appliedBackgroundMusicPreset else { return }
@@ -414,10 +535,16 @@ struct StoryPlayerView: View {
     private func loadAudioIfNeeded() async {
         audio.stop()
         hasPlayableAudio = false
-        guard let name = activeStory.audioFileName else { return }
-        let url = AudioCacheManager.documentsDirectory().appendingPathComponent(name)
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
         do {
+            if let blob = activeStory.audioBlob, !blob.isEmpty {
+                try audio.load(data: blob, title: activeStory.title)
+                hasPlayableAudio = true
+                audio.play()
+                return
+            }
+            guard let name = activeStory.audioFileName else { return }
+            let url = AudioCacheManager.documentsDirectory().appendingPathComponent(name)
+            guard FileManager.default.fileExists(atPath: url.path) else { return }
             try audio.load(fileURL: url, title: activeStory.title)
             hasPlayableAudio = true
             audio.play()
@@ -426,15 +553,4 @@ struct StoryPlayerView: View {
         }
     }
 
-    @MainActor
-    private func pushPlaybackToWidgetAndLiveActivity() async {
-        #if os(iOS)
-        await PlaybackSessionSync.publish(
-            story: activeStory,
-            audio: audio,
-            sleepTimer: sleepTimer,
-            hasPlayableAudio: hasPlayableAudio
-        )
-        #endif
-    }
 }

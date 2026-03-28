@@ -351,7 +351,7 @@ struct HomeView: View {
                 Text("Uyku Zamanı Ritüeli")
                     .font(MasalFont.titleMedium())
                     .foregroundStyle(c.onSurface)
-                Text("Masaldan 15 dakika önce beyaz gürültü açmak çocukların uykuya geçişini kolaylaştırır.")
+                Text("Masaldan birkaç dakika önce beyaz gürültü açmak çocukların uykuya geçişini kolaylaştırır.")
                     .font(MasalFont.bodyMedium())
                     .foregroundStyle(c.onSurfaceVariant)
             }
@@ -412,13 +412,13 @@ struct HomeView: View {
                     profile: profile
                 )
                 modelContext.insert(demo)
-                subscription.registerStoryGenerated()
+                subscription.registerStoryGenerated(modelContext: modelContext)
                 try modelContext.save()
                 playerPresentation = PresentedStory(startStory: demo, playlist: profilePlaylist(active: profile))
                 return
             }
 
-            let voice = StoryPreferences.resolvedVoiceID()
+            let voice = StoryPreferences.resolvedVoiceID(for: profile)
             let result = try await storyService.generateStoryAndAudio(
                 profile: profile,
                 voiceID: voice,
@@ -437,7 +437,8 @@ struct HomeView: View {
             modelContext.insert(story)
             let fileName = try AudioCacheManager.save(data: result.audioData, storyID: story.id, extension: "mp3")
             story.audioFileName = fileName
-            subscription.registerStoryGenerated()
+            story.audioBlob = result.audioData
+            subscription.registerStoryGenerated(modelContext: modelContext)
             try modelContext.save()
             playerPresentation = PresentedStory(startStory: story, playlist: profilePlaylist(active: profile))
         } catch {
