@@ -23,7 +23,7 @@ struct SettingsView: View {
             List {
                 Section {
                     NavigationLink {
-                        StorySettingsView()
+                        StorySettingsView(subscription: subscription)
                             .masalThemeManager(theme)
                     } label: {
                         Label("Masal Ayarları", systemImage: "book.pages.fill")

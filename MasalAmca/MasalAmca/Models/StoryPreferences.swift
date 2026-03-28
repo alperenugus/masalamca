@@ -127,13 +127,39 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
 enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
     case yumuşakBulut
     case bilgeDede
+    /// Premium — erkek
+    case yakamoz
+    /// Premium — kadın
+    case ihlamur
+    /// Premium — erkek
+    case camFisiltisi
+    /// Premium — kadın
+    case lavanta
+    /// Premium — erkek
+    case ruzgar
+    /// Premium — kadın
+    case gelincik
 
     var id: String { rawValue }
+
+    /// Premium abonelik gerektiren ElevenLabs sesleri.
+    var requiresPremium: Bool {
+        switch self {
+        case .yumuşakBulut, .bilgeDede: false
+        case .yakamoz, .ihlamur, .camFisiltisi, .lavanta, .ruzgar, .gelincik: true
+        }
+    }
 
     var title: String {
         switch self {
         case .yumuşakBulut: "Yumuşak Bulut"
         case .bilgeDede: "Bilge Dede"
+        case .yakamoz: "Yakamoz"
+        case .ihlamur: "Ihlamur"
+        case .camFisiltisi: "Çam Fısıltısı"
+        case .lavanta: "Lavanta"
+        case .ruzgar: "Rüzgar"
+        case .gelincik: "Gelincik"
         }
     }
 
@@ -141,18 +167,31 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .yumuşakBulut: "Sakinleştirici ve alçak ses"
         case .bilgeDede: "Tok ve güven verici bir anlatım"
+        case .yakamoz: "Premium • sıcak erkek anlatım"
+        case .ihlamur: "Premium • yumuşak kadın anlatım"
+        case .camFisiltisi: "Premium • dingin erkek anlatım"
+        case .lavanta: "Premium • huzurlu kadın anlatım"
+        case .ruzgar: "Premium • net erkek anlatım"
+        case .gelincik: "Premium • sıcak kadın anlatım"
         }
     }
 
     var symbolName: String {
         switch self {
         case .yumuşakBulut: "cloud.fill"
-        case .bilgeDede: "person.fill"
+        case .bilgeDede, .yakamoz, .ihlamur, .camFisiltisi, .lavanta, .ruzgar, .gelincik: "person.fill"
         }
     }
 
     /// ElevenLabs **Serdar Sağlam** (male, Bilge Dede).
     static let bilgeDedeVoiceID = "NfwyWIJnRR1RrYnStGUG"
+
+    static let yakamozVoiceID = "mF7tIc9VLrznhGooGjaT"
+    static let ihlamurVoiceID = "LYfSi2g3Frvxg50fRl91"
+    static let camFisiltisiVoiceID = "LCHGt3rsPMP50Vs28amI"
+    static let lavantaVoiceID = "ywzrmJ3AgYiLqAeZAGrq"
+    static let ruzgarVoiceID = "j9K9HnBcmgA6xNWqjlX0"
+    static let gelincikVoiceID = "bqaNYmxFgK1TN7CL95PZ"
 
     /// Eski kayıtlar (`neşeliPeri` vb.) için.
     static func resolvedFromStoredRaw(_ raw: String) -> NarratorChoice? {
@@ -171,6 +210,18 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
             Self.defaultFemaleVoiceID()
         case .bilgeDede:
             Self.bilgeDedeVoiceID
+        case .yakamoz:
+            Self.yakamozVoiceID
+        case .ihlamur:
+            Self.ihlamurVoiceID
+        case .camFisiltisi:
+            Self.camFisiltisiVoiceID
+        case .lavanta:
+            Self.lavantaVoiceID
+        case .ruzgar:
+            Self.ruzgarVoiceID
+        case .gelincik:
+            Self.gelincikVoiceID
         }
     }
 }

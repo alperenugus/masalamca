@@ -38,15 +38,20 @@ struct StoryCard: View {
                 .clipShape(Capsule())
                 .padding(10)
             }
-            Text(title)
-                .font(MasalFont.bodyMedium())
-                .fontWeight(.bold)
-                .foregroundStyle(c.onSurface)
-                .lineLimit(2)
-            Text(subtitle)
-                .font(MasalFont.labelMedium())
-                .foregroundStyle(c.onSurfaceVariant.opacity(0.7))
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                Text(title)
+                    .font(MasalFont.bodyMedium())
+                    .fontWeight(.bold)
+                    .foregroundStyle(c.onSurface)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2, reservesSpace: true)
+                Text(subtitle)
+                    .font(MasalFont.labelMedium())
+                    .foregroundStyle(c.onSurfaceVariant.opacity(0.7))
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(width: 200)
+        .frame(width: 200, alignment: .top)
     }
 }

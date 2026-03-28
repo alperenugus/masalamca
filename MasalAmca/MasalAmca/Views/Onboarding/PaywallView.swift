@@ -39,7 +39,7 @@ struct PaywallView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "star.fill")
                                 .foregroundStyle(c.tertiary)
-                            Text("Premium Deneyim")
+                            Text("Daha yumuşak geceler")
                                 .font(MasalFont.labelMedium())
                                 .foregroundStyle(c.tertiary)
                         }
@@ -51,18 +51,18 @@ struct PaywallView: View {
                         )
                         .clipShape(Capsule())
 
-                        Text("Premium ile Her Gün Yeni Masallar")
+                        Text("Her geceye yeni bir masal")
                             .font(MasalFont.headlineMedium())
                             .foregroundStyle(c.onSurface)
-                        Text("Günde 2 yeni masal üret, tüm premium sesleri ve senkronu aç")
+                        Text("Günde iki yeni masal, tüm sakinleştirici sesler ve cihazlar arası senkron seninle")
                             .font(MasalFont.bodyMedium())
                             .foregroundStyle(c.secondary)
                     }
 
                     VStack(spacing: DesignTokens.Spacing.md) {
-                        featureRow(icon: "book.pages.fill", title: "Günde 2 Yeni Masal", subtitle: "Her gün taze hikâyeler üret")
-                        featureRow(icon: "waveform", title: "Premium AI Sesler", subtitle: "En doğal ve rahatlatıcı tonlar")
-                        featureRow(icon: "icloud.fill", title: "CloudKit Senkronizasyon", subtitle: "Tüm cihazlarında kaldığın yerden devam et")
+                        featureRow(icon: "book.pages.fill", title: "Günde iki yeni masal", subtitle: "Her geceye taze bir hikâye bırak")
+                        featureRow(icon: "waveform", title: "Yumuşak AI sesleri", subtitle: "Daha doğal, sakin anlatım tonları")
+                        featureRow(icon: "icloud.fill", title: "Senkron", subtitle: "Tüm cihazlarında kaldığın yerden devam")
                     }
                     .padding(.horizontal)
 
@@ -79,7 +79,7 @@ struct PaywallView: View {
                         .padding(.horizontal)
                     }
 
-                    GradientButton("Ücretsiz Denemeyi Başlat", subtitle: "3 Gün Ücretsiz Deneme") {
+                    GradientButton("Ücretsiz denemeyi başlat", subtitle: "3 gün hediye") {
                         Task {
                             if let p = selectedProduct ?? subscription.products.first {
                                 try? await subscription.purchase(p)
@@ -90,7 +90,7 @@ struct PaywallView: View {
                     }
                     .padding(.horizontal)
 
-                    Text("Deneme süresi sonunda iptal edilmezse otomatik yenilenir. Kullanım Koşulları ve Gizlilik Politikası")
+                    Text("Deneme bitince iptal etmezsen abonelik nazikçe yenilenir. Kullanım koşulları ve gizlilik politikası")
                         .font(MasalFont.labelSmall())
                         .multilineTextAlignment(.center)
                         .foregroundStyle(c.outline)
@@ -142,7 +142,7 @@ struct PaywallView: View {
         } label: {
             VStack(spacing: 6) {
                 if isYearly {
-                    Text("EN POPÜLER")
+                    Text("En sevilen")
                         .font(.system(size: 8, weight: .heavy))
                         .foregroundStyle(c.onPrimary)
                         .padding(.horizontal, 8)

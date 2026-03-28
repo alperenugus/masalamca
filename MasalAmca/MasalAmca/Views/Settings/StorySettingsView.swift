@@ -46,6 +46,7 @@ struct StorySettingsView: View {
     @Environment(\.masalThemeManager) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(\.masalChildProfileManager) private var profileManager
+    @Bindable var subscription: SubscriptionManager
     @Query private var profiles: [ChildProfile]
 
     @State private var length: StoryLengthPreference = .medium
@@ -59,6 +60,7 @@ struct StorySettingsView: View {
 
     @State private var localPreview = LocalVoicePreview()
     @State private var persistTask: Task<Void, Never>?
+    @State private var showPaywall = false
 
     var body: some View {
         let c = theme.colors
@@ -81,12 +83,31 @@ struct StorySettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(c.surface, for: .navigationBar)
         .onAppear {
-            applySnapshot(StoryPreferences.load(for: active))
+            let snap = StoryPreferences.load(for: active)
+            let storedPremiumWhileLocked = snap.narrator.requiresPremium && !subscription.isPremium
+            applySnapshot(snap)
+            if storedPremiumWhileLocked {
+                persistSnapshot()
+            }
             localPreview.onFinish = { previewing = nil }
         }
         .onChange(of: profileManager.activeProfileID) { _, _ in
             let a = profileManager.activeProfile(from: profiles)
-            applySnapshot(StoryPreferences.load(for: a))
+            let snap = StoryPreferences.load(for: a)
+            let storedPremiumWhileLocked = snap.narrator.requiresPremium && !subscription.isPremium
+            applySnapshot(snap)
+            if storedPremiumWhileLocked {
+                persistSnapshot()
+            }
+        }
+        .onChange(of: subscription.isPremium) { _, _ in
+            let a = profileManager.activeProfile(from: profiles)
+            let snap = StoryPreferences.load(for: a)
+            let storedPremiumWhileLocked = snap.narrator.requiresPremium && !subscription.isPremium
+            applySnapshot(snap)
+            if storedPremiumWhileLocked {
+                persistSnapshot()
+            }
         }
         .onChange(of: length) { _, _ in schedulePersistSnapshot() }
         .onChange(of: narrator) { _, _ in schedulePersistSnapshot() }
@@ -108,6 +129,12 @@ struct StorySettingsView: View {
             Button("Tamam", role: .cancel) { previewError = nil }
         } message: {
             Text(previewError ?? "")
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(subscription: subscription) {
+                showPaywall = false
+            }
+            .presentationDetents([.large])
         }
     }
 
@@ -217,6 +244,10 @@ struct StorySettingsView: View {
         return HStack(spacing: DesignTokens.Spacing.lg) {
             Button {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                guard subscription.canUseNarrator(choice) else {
+                    showPaywall = true
+                    return
+                }
                 narrator = choice
             } label: {
                 HStack(spacing: DesignTokens.Spacing.lg) {
@@ -230,9 +261,17 @@ struct StorySettingsView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(choice.title)
-                            .font(MasalFont.titleMedium())
-                            .foregroundStyle(selected ? c.primary.opacity(0.95) : c.onSurface)
+                        HStack(spacing: 6) {
+                            Text(choice.title)
+                                .font(MasalFont.titleMedium())
+                                .foregroundStyle(selected ? c.primary.opacity(0.95) : c.onSurface)
+                            if choice.requiresPremium {
+                                Image(systemName: "crown.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(c.tertiary)
+                                    .accessibilityLabel("Premium ses")
+                            }
+                        }
                         Text(choice.subtitle)
                             .font(MasalFont.labelSmall())
                             .foregroundStyle(c.secondary.opacity(0.72))
@@ -270,6 +309,7 @@ struct StorySettingsView: View {
                     .allowsHitTesting(false)
             }
         }
+        .opacity(subscription.canUseNarrator(choice) || selected ? 1 : 0.88)
     }
 
     private func previewButton(choice: NarratorChoice, isPreviewing: Bool) -> some View {
@@ -395,7 +435,11 @@ struct StorySettingsView: View {
 
     private func applySnapshot(_ snap: StoryPreferences.Snapshot) {
         length = snap.length
-        narrator = snap.narrator
+        var n = snap.narrator
+        if n.requiresPremium && !subscription.isPremium {
+            n = .yumuşakBulut
+        }
+        narrator = n
         bento = snap.bento
         autoStop = snap.autoStopAfterStory
         backgroundMusic = snap.backgroundMusicInPlayer

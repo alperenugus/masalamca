@@ -544,11 +544,11 @@ struct StoryPlayerView: View {
             HStack(spacing: 8) {
                 Image(systemName: "text.book.closed.fill")
                     .foregroundStyle(c.tertiary)
-                Text("Ses kaydı yok")
+                Text("Bu masalda kayıtlı ses yok")
                     .font(MasalFont.titleMedium())
                     .foregroundStyle(c.onSurface)
             }
-            Text("Bu masalı seslendirme olmadan okuyabilirsiniz. Premium ile üretilen masallarda ses otomatik eklenir.")
+            Text("İstersen metni birlikte okuyabilirsiniz. Premium ile üretilen masallarda ses genelde otomatik eklenir.")
                 .font(MasalFont.bodyMedium())
                 .foregroundStyle(c.onSurfaceVariant)
             Text(activeStory.body)

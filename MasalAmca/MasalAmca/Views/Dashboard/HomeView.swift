@@ -90,11 +90,11 @@ struct HomeView: View {
             )
             .masalThemeManager(theme)
         }
-        .alert("Hata", isPresented: Binding(
+        .alert("Bir şeyler ters gitti", isPresented: Binding(
             get: { generationError != nil },
             set: { if !$0 { generationError = nil } }
         )) {
-            Button("Tamam", role: .cancel) { generationError = nil }
+            Button("Anladım", role: .cancel) { generationError = nil }
         } message: {
             Text(generationError ?? "")
         }
@@ -246,13 +246,13 @@ struct HomeView: View {
                         .multilineTextAlignment(.center)
                         .foregroundStyle((freeTrialExhausted || premiumDailyQuotaReached) ? c.onSurface : c.onPrimaryContainer)
                     if freeTrialExhausted {
-                        Text("2 ücretsiz masalını kullandın. Premium ile her gün 2 yeni masal üretebilirsin.")
+                        Text("İki ücretsiz masalın bu geceye eşlik etti. İstersen Premium ile her gün iki yeni masal üretmeye devam edebilirsin.")
                             .font(MasalFont.labelMedium())
                             .multilineTextAlignment(.center)
                             .foregroundStyle(c.secondary)
                             .padding(.horizontal, DesignTokens.Spacing.md)
                     } else if premiumDailyQuotaReached {
-                        Text("Bugün 2 masal ürettin. Yarın yeni masal için dön veya kitaplığındakileri dinle.")
+                        Text("Bugün için yeterince masal ürettin gibi görünüyor. Kitaplığındakileri tekrar dinleyebilir veya yarın yeni bir masal için dönebilirsin.")
                             .font(MasalFont.labelMedium())
                             .multilineTextAlignment(.center)
                             .foregroundStyle(c.secondary)
@@ -269,9 +269,9 @@ struct HomeView: View {
     }
 
     private var buttonTitle: String {
-        if freeTrialExhausted { return "PREMIUM'A GEÇ" }
-        if premiumDailyQuotaReached { return "BUGÜNLÜK KOTA DOLDU — KİTAPLIK" }
-        return "BU GECEKİ MASALI ÜRET"
+        if freeTrialExhausted { return "Premium’u keşfet" }
+        if premiumDailyQuotaReached { return "Kitaplığına göz at" }
+        return "Bu gece bir masal üret"
     }
 
     private func recentSection(active: ChildProfile?) -> some View {
@@ -350,7 +350,7 @@ struct HomeView: View {
                     Image(systemName: "crown.fill")
                         .font(.caption2)
                         .foregroundStyle(c.tertiary)
-                    Text("Taç işaretli sesler Premium’a özel")
+                    Text("Taçlı sesler Premium ile birlikte gelir")
                         .font(MasalFont.labelSmall())
                         .foregroundStyle(c.onSurfaceVariant.opacity(0.85))
                 }
@@ -427,7 +427,7 @@ struct HomeView: View {
         let tip = DailyTips.tipForToday()
         return HStack(alignment: .top, spacing: DesignTokens.Spacing.lg) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("GÜNÜN İPUCU")
+                Text("Günün ipucu")
                     .font(MasalFont.labelSmall())
                     .foregroundStyle(c.tertiary)
                 Text(tip.title)
@@ -475,13 +475,18 @@ struct HomeView: View {
     @MainActor
     private func generateStory(profile: ChildProfile?) async {
         guard let profile else { return }
+        let prefs = StoryPreferences.load(for: profile)
+        guard subscription.canUseNarrator(prefs.narrator) else {
+            showPaywall = true
+            return
+        }
         guard subscription.canGenerateStory(storiesCreatedTodayFromStore: storiesCreatedTodayCount) else { return }
         isGenerating = true
         defer { isGenerating = false }
 
         do {
             if AppConfiguration.proxyBaseURL == nil {
-                let demoLen = StoryPreferences.load(for: profile).length.targetListeningDurationSeconds
+                let demoLen = prefs.length.targetListeningDurationSeconds
                 let demo = Story(
                     title: "Yıldız Tozu Yolculuğu",
                     body: "Bir varmış bir yokmuş, \(profile.name) adında cesur bir çocuk varmış. Her gece yıldızlar ona fısıldarmış ve rüyalarına yolculuk etmiş. Bu gece de huzurla uyumuş ve sabaha kadar güzel rüyalar görmüş.",
@@ -499,7 +504,6 @@ struct HomeView: View {
             }
 
             let voice = StoryPreferences.resolvedVoiceID(for: profile)
-            let prefs = StoryPreferences.load(for: profile)
             let result = try await storyService.generateStoryAndAudio(
                 profile: profile,
                 voiceID: voice,

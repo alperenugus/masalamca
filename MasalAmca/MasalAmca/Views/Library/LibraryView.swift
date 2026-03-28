@@ -77,7 +77,7 @@ struct LibraryView: View {
 
             if filtered.isEmpty {
                 Section {
-                    Text("Masal bulunamadı.")
+                    Text("Bu filtreyle eşleşen masal yok — aramayı veya filtreyi değiştirmeyi dene.")
                         .font(MasalFont.bodyLarge())
                         .foregroundStyle(c.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)

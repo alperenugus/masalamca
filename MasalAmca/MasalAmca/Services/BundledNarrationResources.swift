@@ -12,9 +12,9 @@ enum BundledNarrationResources {
     static func audioFileURL(for narrator: NarratorChoice) -> URL? {
         let baseName: String
         switch narrator {
-        case .yumuşakBulut:
+        case .yumuşakBulut, .ihlamur, .lavanta, .gelincik:
             baseName = "female_voice"
-        case .bilgeDede:
+        case .bilgeDede, .yakamoz, .camFisiltisi, .ruzgar:
             baseName = "male_voice"
         }
         for sub in searchSubdirectories {

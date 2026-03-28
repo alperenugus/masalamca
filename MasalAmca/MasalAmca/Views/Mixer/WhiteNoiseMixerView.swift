@@ -49,7 +49,7 @@ struct WhiteNoiseMixerView: View {
                 ForEach(MixerSound.allCases) { sound in
                     let locked = !subscription.canUseSound(sound)
                     WhiteNoiseRow(
-                        title: sound.displayTitle + (locked ? " (Premium)" : ""),
+                        title: sound.displayTitle + (locked ? " · Premium" : ""),
                         systemImageName: sound.systemImage,
                         level: Binding(
                             get: { mixer.levels[sound] ?? 0 },

@@ -111,6 +111,10 @@ final class SubscriptionManager {
     func canUseSound(_ sound: MixerSound) -> Bool {
         isPremium || MixerSound.freeTier.contains(sound)
     }
+
+    func canUseNarrator(_ choice: NarratorChoice) -> Bool {
+        !choice.requiresPremium || isPremium
+    }
 }
 
 #if DEBUG
