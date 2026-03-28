@@ -15,9 +15,18 @@ enum StoryLengthPreference: String, CaseIterable, Sendable {
 
     var displayTitle: String {
         switch self {
-        case .short: "Kısa (3 dk)"
-        case .medium: "Orta (5 dk)"
-        case .long: "Uzun (10 dk)"
+        case .short: "Kısa (1 dk)"
+        case .medium: "Orta (3 dk)"
+        case .long: "Uzun (5 dk)"
+        }
+    }
+
+    /// Kabaca hedef dinleme süresi (TTS tempoyu profil bazında bilmediğimiz için UI / meta).
+    var targetListeningDurationSeconds: Int {
+        switch self {
+        case .short: 60
+        case .medium: 180
+        case .long: 300
         }
     }
 }
@@ -146,6 +155,7 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// ElevenLabs **Serdar Sağlam** (male, Bilge Dede).
     static let bilgeDedeVoiceID = "NfwyWIJnRR1RrYnStGUG"
 
     var isSelectable: Bool {
@@ -155,6 +165,7 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// ElevenLabs **Gökçe Deniz** — `Info.plist` `ElevenLabsVoiceID`, else `"default"`.
     static func defaultFemaleVoiceID() -> String {
         Bundle.main.object(forInfoDictionaryKey: "ElevenLabsVoiceID") as? String ?? "default"
     }

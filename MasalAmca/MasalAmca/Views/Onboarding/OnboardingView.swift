@@ -18,6 +18,7 @@ struct OnboardingView: View {
 
     @State private var childName = ""
     @State private var ageGroup: AgeGroup = .twoToFour
+    @State private var storyLength: StoryLengthPreference = .medium
     @State private var selectedBento: StoryBentoTheme = .adventure
 
     var body: some View {
@@ -76,6 +77,43 @@ struct OnboardingView: View {
                         .padding(6)
                         .background(c.surfaceContainerLow)
                         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous))
+                    }
+
+                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
+                        Text("Masal Süresi")
+                            .font(MasalFont.bodyMedium())
+                            .fontWeight(.semibold)
+                            .foregroundStyle(c.secondary)
+                        Text("Masal Ayarları’ndaki seçeneklerle aynı; üretilen metnin uzunluğunu belirler.")
+                            .font(MasalFont.labelMedium())
+                            .foregroundStyle(c.onSurfaceVariant.opacity(0.85))
+                        HStack(spacing: DesignTokens.Spacing.xs) {
+                            ForEach(StoryLengthPreference.allCases, id: \.rawValue) { opt in
+                                let on = storyLength == opt
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    storyLength = opt
+                                } label: {
+                                    Text(opt.displayTitle)
+                                        .font(MasalFont.labelMedium())
+                                        .fontWeight(on ? .bold : .medium)
+                                        .foregroundStyle(on ? c.onPrimaryContainer : c.secondary)
+                                        .multilineTextAlignment(.center)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
+                                                .fill(on ? AnyShapeStyle(c.primaryContainer) : AnyShapeStyle(c.surfaceContainerHigh.opacity(0.35)))
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(DesignTokens.Spacing.xs)
+                        .background(
+                            RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                                .fill(c.surfaceContainerLow)
+                        )
                     }
 
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
@@ -153,6 +191,7 @@ struct OnboardingView: View {
             themes: themes.isEmpty ? [.fairyTale] : themes
         )
         profile.bentoThemeRaw = bento.rawValue
+        profile.storyLengthRaw = storyLength.rawValue
         modelContext.insert(profile)
         profileManager.switchTo(profile)
         try? modelContext.save()

@@ -17,9 +17,12 @@ interface StoryRequest {
   themes: string[];
   behavioral_goal?: string;
   language: string;
-  /** "short" | "medium" | "long" — kelime hedefi */
+  /** "short" | "medium" | "long" — hedef dinleme süresi + kelime bandı */
   target_length?: string;
 }
+
+/** ElevenLabs TTS (maliyet / gecikme için Flash v2.5). */
+const ELEVEN_TTS_MODEL = "eleven_flash_v2_5";
 
 interface TTSRequest {
   text: string;
@@ -30,13 +33,15 @@ interface TTSRequest {
 function lengthWordGuidance(target?: string): string {
   switch (target) {
     case "short":
-      return "Yaklaşık 250-350 kelime; kısa ve öz tut.";
+      return "Hedef dinleme süresi yaklaşık 1 dakika (sakin anlatım). Gövde için kabaca 90-130 kelime; gereksiz tekrar yok, öz ama tam bir mini masal.";
     case "long":
-      return "Yaklaşık 650-950 kelime; biraz daha uzun ve ayrıntılı tut.";
+      return "Hedef dinleme süresi yaklaşık 5 dakika. Gövde için kabaca 480-620 kelime; olayı tamamla, sakin tempoda okunabilir paragraflar.";
     default:
-      return "Yaklaşık 400-650 kelime.";
+      return "Hedef dinleme süresi yaklaşık 3 dakika. Gövde için kabaca 280-380 kelime; baş-orta-son dengeli, uyku öncesi ritim.";
   }
 }
+
+const ELEVEN_TTS_STYLE_RULES = `Seslendirme: Metin ElevenLabs TTS ile okunacak. Duraklar ve vurgu noktalama ile gelir: tam cümleler kur; virgül ve nokta ile nefes yerlerini ayarla; diyalogda tırnak kullan; abartılı ünlem ve tamamı büyük harf (ALL CAPS) kullanma.`;
 
 function systemPromptForAge(ageHint: string, targetLength?: string): string {
   const len = lengthWordGuidance(targetLength);
@@ -45,7 +50,9 @@ Kurallar:
 - Sadece Türkçe yaz.
 - Şiddet, korku, yaralanma, ölüm yok.
 - Çocuk kahraman olsun; yaşa uygun kelime hazısı (${ageHint}).
-- ${len} Sıcak, yatıştırıcı ton.
+- ${len}
+- ${ELEVEN_TTS_STYLE_RULES}
+- Sıcak, yatıştırıcı ton.
 - JSON döndür: {"title":"...","body":"...","genre":"calming|adventure|educational"}`;
 }
 
@@ -174,7 +181,8 @@ async function handleTTS(request: Request, env: Env): Promise<Response> {
       },
       body: JSON.stringify({
         text: body.text,
-        model_id: "eleven_multilingual_v2",
+        model_id: ELEVEN_TTS_MODEL,
+        language_code: "tr",
       }),
     }
   );

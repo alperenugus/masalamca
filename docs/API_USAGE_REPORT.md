@@ -34,7 +34,7 @@ Bu belge, uygulamanın **dış API’lere** nasıl bağlandığını, hangi **mo
 - `themes` — string dizisi (Masal Ayarları bento temalarından Türkçe ipuçları; bazı seçenekler birden fazla ipucu gönderebilir)  
 - `behavioral_goal` — isteğe bağlı  
 - `language` — `"tr"`  
-- `target_length` — isteğe bağlı: `short` \| `medium` \| `long` (kelime bandını system prompt’a ekler)
+- `target_length` — isteğe bağlı: `short` \| `medium` \| `long` (~1 / ~3 / ~5 dk hedef süre + kelime bandı + TTS için noktalama kuralları)
 
 **Yanıt (proxy → uygulama):** `title`, `body`, `genre`, `word_count`, `model`.
 
@@ -46,7 +46,7 @@ Bu belge, uygulamanın **dış API’lere** nasıl bağlandığını, hangi **mo
 |------|--------|
 | **HTTP** | `POST`, gövde JSON |
 | **Upstream** | `https://api.elevenlabs.io/v1/text-to-speech/{voice_id}` |
-| **TTS modeli** | **`eleven_multilingual_v2`** |
+| **TTS modeli** | **`eleven_flash_v2_5`** (isteğe bağlı `language_code: tr`) |
 | **Ses** | İstekteki `voice_id`; `"default"` veya boşsa Worker ortamındaki `ELEVENLABS_VOICE_ID` |
 
 **İstek gövdesi:** `text`, `voice_id`, `output_format` (uygulama: `mp3_44100_128`).
@@ -64,7 +64,8 @@ Worker içinde `systemPromptForAge(ageHint, targetLength)` ile oluşturulur. Öz
 - Türkçe, çocuk uyku masalı.  
 - Şiddet, korku, yaralanma, **ölüm yok**.  
 - Çocuk kahraman; yaş grubuna uygun kelime hazısı (`ageHint`).  
-- Uzunluk: `target_length` ile **kısa / orta / uzun** kelime bantları (ör. ~250–350, ~400–650, ~650–950 kelime).  
+- Uzunluk: `target_length` ile **hedef dinleme süresi** (~1 dk / ~3 dk / ~5 dk) ve buna uygun **kelime bantları** (ör. ~90–130, ~280–380, ~480–620).  
+- ElevenLabs TTS için **noktalama** (duraklar, tırnak, abartısız ünlem, ALL CAPS yok).  
 - Sıcak, yatıştırıcı ton.  
 - **JSON:** `{"title":"...","body":"...","genre":"calming|adventure|educational"}`.
 
@@ -109,7 +110,7 @@ Aşağıdaki tablo **yalnızca API maliyeti** içindir; altyapı (Worker, iCloud
 Varsayımlar (güncel fiyatları kendi sözleşmenizden doğrulayın):
 
 - **OpenAI `gpt-4o-mini`:** tipik masal çağrısı ~1–2k token girdi + ~800–1.200 token çıktı (orta uzunluk metin). Birleşik maliyet çoğu senaryoda **masal başına ~US$0.001–0.005** bandında kalabilir (token başına fiyatlarınıza göre değişir).  
-- **ElevenLabs `eleven_multilingual_v2`:** masal gövdesi uzunluğuna bağlı karakter / kredi tüketimi; **masal başına ~US$0.03–0.12** gibi geniş bir aralık yaygın görülür (ses süresi ve faturalama birimine göre).
+- **ElevenLabs `eleven_flash_v2_5`:** karakter / kredi; çok dilli v2’ye göre genelde daha düşük birim fiyat (planınıza göre). Kısa masallar (~1 dk hedef) karakter sayısını belirgin düşürür; **masal başına** aralık metin uzunluğuna ve tarifenize göre değişir.
 
 **Günde 2 masal / kullanıcı:**
 
@@ -124,7 +125,7 @@ Varsayımlar (güncel fiyatları kendi sözleşmenizden doğrulayın):
 - 1.000 aktif kullanıcı, hepsi günde 2 masal, “orta” tahmin ~US$0.10/kullanıcı/gün → **~US$100/gün** ≈ **~US$3.000/ay**.  
 - Aynı senaryoda sadece OpenAI genelde toplamın küçük bir kısmı; **TTS baskın maliyet** olmaya devam eder.
 
-**Maliyeti düşürmek için:** daha kısa hedef uzunluk (`short`), önbellek (aynı masalı tekrar TTS etmeme), premium’da bile günlük üst sınır, daha ucuz TTS katmanı veya kısmi Apple `AVSpeechSynthesizer` yedekleri (kalite takası).
+**Maliyeti düşürmek için:** daha kısa hedef süre (`short` ≈ 1 dk), Flash TTS modeli, önbellek (aynı metni tekrar TTS etmeme), günlük üst sınır veya kısmi `AVSpeechSynthesizer` yedeği (kalite takası).
 
 ---
 

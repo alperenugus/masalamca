@@ -402,10 +402,11 @@ struct HomeView: View {
 
         do {
             if AppConfiguration.proxyBaseURL == nil {
+                let demoLen = StoryPreferences.load(for: profile).length.targetListeningDurationSeconds
                 let demo = Story(
                     title: "Yıldız Tozu Yolculuğu",
                     body: "Bir varmış bir yokmuş, \(profile.name) adında cesur bir çocuk varmış. Her gece yıldızlar ona fısıldarmış ve rüyalarına yolculuk etmiş. Bu gece de huzurla uyumuş ve sabaha kadar güzel rüyalar görmüş.",
-                    durationSeconds: 120,
+                    durationSeconds: demoLen,
                     audioFileName: nil,
                     genre: .calming,
                     generationModel: "demo-local",
@@ -419,6 +420,7 @@ struct HomeView: View {
             }
 
             let voice = StoryPreferences.resolvedVoiceID(for: profile)
+            let prefs = StoryPreferences.load(for: profile)
             let result = try await storyService.generateStoryAndAudio(
                 profile: profile,
                 voiceID: voice,
@@ -428,7 +430,7 @@ struct HomeView: View {
             let story = Story(
                 title: result.story.title,
                 body: result.story.body,
-                durationSeconds: 180,
+                durationSeconds: prefs.length.targetListeningDurationSeconds,
                 audioFileName: nil,
                 genre: genre,
                 generationModel: result.story.model ?? "unknown",
