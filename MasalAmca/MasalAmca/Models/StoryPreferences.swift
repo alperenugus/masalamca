@@ -127,7 +127,6 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
 enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
     case yumuşakBulut
     case bilgeDede
-    case neşeliPeri
 
     var id: String { rawValue }
 
@@ -135,7 +134,6 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .yumuşakBulut: "Yumuşak Bulut"
         case .bilgeDede: "Bilge Dede"
-        case .neşeliPeri: "Neşeli Peri"
         }
     }
 
@@ -143,7 +141,6 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .yumuşakBulut: "Sakinleştirici ve alçak ses"
         case .bilgeDede: "Tok ve güven verici bir anlatım"
-        case .neşeliPeri: "Canlı ve enerjik karakter sesleri"
         }
     }
 
@@ -151,18 +148,16 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .yumuşakBulut: "cloud.fill"
         case .bilgeDede: "person.fill"
-        case .neşeliPeri: "wand.and.stars"
         }
     }
 
     /// ElevenLabs **Serdar Sağlam** (male, Bilge Dede).
     static let bilgeDedeVoiceID = "NfwyWIJnRR1RrYnStGUG"
 
-    var isSelectable: Bool {
-        switch self {
-        case .neşeliPeri: false
-        default: true
-        }
+    /// Eski kayıtlar (`neşeliPeri` vb.) için.
+    static func resolvedFromStoredRaw(_ raw: String) -> NarratorChoice? {
+        if raw == "neşeliPeri" { return .yumuşakBulut }
+        return NarratorChoice(rawValue: raw)
     }
 
     /// ElevenLabs **Gökçe Deniz** — `Info.plist` `ElevenLabsVoiceID`, else `"default"`.
@@ -176,8 +171,6 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
             Self.defaultFemaleVoiceID()
         case .bilgeDede:
             Self.bilgeDedeVoiceID
-        case .neşeliPeri:
-            nil
         }
     }
 }
@@ -220,10 +213,10 @@ enum StoryPreferences {
         }()
 
         let narrator: NarratorChoice = {
-            if !profile.narratorRaw.isEmpty, let n = NarratorChoice(rawValue: profile.narratorRaw), n.isSelectable {
+            if !profile.narratorRaw.isEmpty, let n = NarratorChoice.resolvedFromStoredRaw(profile.narratorRaw) {
                 return n
             }
-            if let s = d.string(forKey: Keys.narrator), let n = NarratorChoice(rawValue: s), n.isSelectable {
+            if let s = d.string(forKey: Keys.narrator), let n = NarratorChoice.resolvedFromStoredRaw(s) {
                 return n
             }
             return .yumuşakBulut
@@ -292,8 +285,7 @@ enum StoryPreferences {
     private static func legacySnapshotFromUserDefaults() -> Snapshot {
         let d = UserDefaults.standard
         let length = d.string(forKey: Keys.length).flatMap(StoryLengthPreference.init(rawValue:)) ?? .medium
-        let stored = d.string(forKey: Keys.narrator).flatMap(NarratorChoice.init(rawValue:)) ?? .yumuşakBulut
-        let narrator = stored.isSelectable ? stored : .yumuşakBulut
+        let narrator = d.string(forKey: Keys.narrator).flatMap(NarratorChoice.resolvedFromStoredRaw) ?? .yumuşakBulut
         let bento: StoryBentoTheme
         if let raw = d.string(forKey: Keys.bentoTheme), let t = StoryBentoTheme(rawValue: raw) {
             bento = t

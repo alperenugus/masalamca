@@ -17,4 +17,13 @@ enum StoryGenre: String, Codable, CaseIterable, Sendable {
         case .educational: "Eğitici"
         }
     }
+
+    /// Kitaplık hızlı filtre etiketi (kısa).
+    var filterChipTitle: String {
+        switch self {
+        case .calming: "Uyku"
+        case .adventure: "Macera"
+        case .educational: "Eğitici"
+        }
+    }
 }

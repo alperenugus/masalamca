@@ -37,15 +37,16 @@ struct LibraryView: View {
         let filtered = filteredStories(active: active)
         let recent = Array(filtered.prefix(5))
         let older = Array(filtered.dropFirst(5))
+        let sideInset = DesignTokens.Spacing.lg
 
         List {
             Section {
                 navBar
-                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 4, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: 8, leading: sideInset, bottom: 4, trailing: sideInset))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
-                searchAndChips
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+                searchAndChips(active: active)
+                    .listRowInsets(EdgeInsets(top: 0, leading: sideInset, bottom: 8, trailing: sideInset))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             }
@@ -84,7 +85,7 @@ struct LibraryView: View {
 
             Section {
                 statsBento
-                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 24, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: 8, leading: sideInset, bottom: 24, trailing: sideInset))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             }
@@ -113,6 +114,23 @@ struct LibraryView: View {
                 }
             }
         }
+        .onChange(of: active?.id) { _, _ in
+            filter = .all
+        }
+        .onChange(of: storyGenreFingerprint(active: active)) { _, _ in
+            let chips = libraryFilterChips(active: active)
+            if !chips.contains(filter) {
+                filter = .all
+            }
+        }
+    }
+
+    private func storyGenreFingerprint(active: ChildProfile?) -> String {
+        stories
+            .filter { $0.profile?.id == active?.id }
+            .map(\.genreRaw)
+            .sorted()
+            .joined(separator: "|")
     }
 
     @ViewBuilder
@@ -133,7 +151,7 @@ struct LibraryView: View {
         }
         .buttonStyle(.plain)
         .listRowBackground(theme.colors.surfaceContainer)
-        .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12))
+        .listRowInsets(EdgeInsets(top: 0, leading: DesignTokens.Spacing.lg, bottom: 0, trailing: DesignTokens.Spacing.lg))
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
                 deleteStory(s)
@@ -208,8 +226,9 @@ struct LibraryView: View {
         .padding(.top, 8)
     }
 
-    private var searchAndChips: some View {
+    private func searchAndChips(active: ChildProfile?) -> some View {
         let c = theme.colors
+        let chips = libraryFilterChips(active: active)
         return VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             HStack {
                 Image(systemName: "magnifyingglass")
@@ -223,7 +242,7 @@ struct LibraryView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(LibraryFilter.allCases) { f in
+                    ForEach(chips, id: \.self) { f in
                         Button {
                             filter = f
                         } label: {
@@ -242,6 +261,16 @@ struct LibraryView: View {
                 }
             }
         }
+    }
+
+    /// Tümü + Favoriler + bu çocuk için üretilmiş masallarda gerçekten bulunan türler.
+    private func libraryFilterChips(active: ChildProfile?) -> [LibraryFilter] {
+        var out: [LibraryFilter] = [.all, .favorites]
+        let mine = stories.filter { $0.profile?.id == active?.id }
+        let present = Set(mine.map(\.genre))
+        let ordered = StoryGenre.allCases.filter { present.contains($0) }
+        out.append(contentsOf: ordered.map { .genre($0) })
+        return out
     }
 
     private func sectionTitle(_ t: String) -> some View {
@@ -302,22 +331,22 @@ struct LibraryView: View {
         switch filter {
         case .all: break
         case .favorites: list = list.filter(\.isFavorite)
-        case .sleep: list = list.filter { $0.genre == .calming }
-        case .adventure: list = list.filter { $0.genre == .adventure }
+        case .genre(let g): list = list.filter { $0.genre == g }
         }
         return list
     }
 }
 
-private enum LibraryFilter: String, CaseIterable, Identifiable {
-    case all, favorites, sleep, adventure
-    var id: String { rawValue }
+private enum LibraryFilter: Hashable {
+    case all
+    case favorites
+    case genre(StoryGenre)
+
     var title: String {
         switch self {
         case .all: "Tümü"
         case .favorites: "Favoriler"
-        case .sleep: "Uyku"
-        case .adventure: "Macera"
+        case .genre(let g): g.filterChipTitle
         }
     }
 }

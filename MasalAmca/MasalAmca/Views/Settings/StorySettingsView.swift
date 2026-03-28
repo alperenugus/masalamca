@@ -211,13 +211,11 @@ struct StorySettingsView: View {
 
     private func narratorRow(choice: NarratorChoice) -> some View {
         let c = theme.colors
-        let selected = narrator == choice && choice.isSelectable
-        let locked = !choice.isSelectable
+        let selected = narrator == choice
         let isPreviewing = previewing == choice
 
         return HStack(spacing: DesignTokens.Spacing.lg) {
             Button {
-                guard choice.isSelectable else { return }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 narrator = choice
             } label: {
@@ -235,14 +233,14 @@ struct StorySettingsView: View {
                         Text(choice.title)
                             .font(MasalFont.titleMedium())
                             .foregroundStyle(selected ? c.primary.opacity(0.95) : c.onSurface)
-                        Text(locked ? "Çok yakında" : choice.subtitle)
+                        Text(choice.subtitle)
                             .font(MasalFont.labelSmall())
-                            .foregroundStyle(c.secondary.opacity(locked ? 0.5 : 0.72))
+                            .foregroundStyle(c.secondary.opacity(0.72))
                     }
 
                     Spacer(minLength: 8)
 
-                    if selected, choice.isSelectable {
+                    if selected {
                         Text("Seçili")
                             .font(MasalFont.labelSmall())
                             .fontWeight(.bold)
@@ -253,9 +251,8 @@ struct StorySettingsView: View {
                 }
             }
             .buttonStyle(.plain)
-            .disabled(locked)
 
-            previewButton(choice: choice, isPreviewing: isPreviewing, locked: locked)
+            previewButton(choice: choice, isPreviewing: isPreviewing)
         }
         .padding(DesignTokens.Spacing.lg)
         .background(
@@ -270,24 +267,24 @@ struct StorySettingsView: View {
             if selected {
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
                     .fill(c.primary.opacity(0.05))
+                    .allowsHitTesting(false)
             }
         }
-        .opacity(locked ? 0.55 : 1)
     }
 
-    private func previewButton(choice: NarratorChoice, isPreviewing: Bool, locked: Bool) -> some View {
+    private func previewButton(choice: NarratorChoice, isPreviewing: Bool) -> some View {
         let c = theme.colors
+        let isSelectedRow = choice == narrator
         return Button {
-            guard !locked else { return }
             Task { await togglePreview(for: choice) }
         } label: {
             Image(systemName: isPreviewing ? "pause.fill" : "play.fill")
                 .font(.title3)
-                .foregroundStyle(choice == narrator && choice.isSelectable ? c.onPrimaryContainer : c.primary.opacity(0.9))
+                .foregroundStyle(isSelectedRow ? c.onPrimaryContainer : c.primary.opacity(0.9))
                 .frame(width: 44, height: 44)
                 .background(
                     Circle()
-                        .fill(choice == narrator && choice.isSelectable ? c.primaryContainer : Color.clear)
+                        .fill(isSelectedRow ? c.primaryContainer : Color.clear)
                         .overlay {
                             Circle()
                                 .stroke(c.outlineVariant.opacity(0.25), lineWidth: 1)
@@ -296,7 +293,6 @@ struct StorySettingsView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(isPreviewing ? "Önizlemeyi durdur" : "Sesi önizle")
-        .disabled(locked)
     }
 
     private var bentoSection: some View {
@@ -427,8 +423,6 @@ struct StorySettingsView: View {
     }
 
     private func togglePreview(for choice: NarratorChoice) async {
-        guard choice.isSelectable else { return }
-
         if previewing == choice {
             mp3PreviewPlayer?.stop()
             mp3PreviewPlayer = nil

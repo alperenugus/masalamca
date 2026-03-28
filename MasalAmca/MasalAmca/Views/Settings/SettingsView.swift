@@ -107,6 +107,10 @@ struct SettingsView: View {
             .background(c.surface)
             .navigationTitle("Ayarlar")
             .toolbarBackground(c.surface, for: .navigationBar)
+            .task {
+                await subscription.loadProducts()
+                await subscription.refreshEntitlements()
+            }
             .sheet(isPresented: $showPaywall) {
                 PaywallView(subscription: subscription) { showPaywall = false }
                     .presentationDetents([.large])

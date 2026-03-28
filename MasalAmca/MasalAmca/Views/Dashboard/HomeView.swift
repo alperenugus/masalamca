@@ -171,27 +171,42 @@ struct HomeView: View {
 
     private func generateButton(profile: ChildProfile?) -> some View {
         let c = theme.colors
+        let quotaFull = !subscription.isPremium && !subscription.canGenerateStory()
         return Button {
-            Task { await generateStory(profile: profile) }
+            if subscription.canGenerateStory() {
+                Task { await generateStory(profile: profile) }
+            } else {
+                tabSelection = .library
+            }
         } label: {
             ZStack {
                 LinearGradient(
-                    colors: [c.primaryContainer, c.primary],
+                    colors: quotaFull
+                        ? [c.surfaceContainerHigh, c.surfaceContainer]
+                        : [c.primaryContainer, c.primary],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 VStack(spacing: DesignTokens.Spacing.md) {
-                    Image(systemName: "sparkles")
+                    Image(systemName: quotaFull ? "books.vertical.fill" : "sparkles")
                         .font(.system(size: 36))
-                        .foregroundStyle(c.onPrimaryContainer)
-                    Text("BU GECEKİ MASALI ÜRET")
+                        .foregroundStyle(quotaFull ? c.primary.opacity(0.85) : c.onPrimaryContainer)
+                    Text(quotaFull ? "BUGÜNLÜK KOTA DOLDU — KİTAPLIK" : "BU GECEKİ MASALI ÜRET")
                         .font(MasalFont.titleMedium())
-                        .foregroundStyle(c.onPrimaryContainer)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(quotaFull ? c.onSurface : c.onPrimaryContainer)
+                    if quotaFull {
+                        Text("Ücretsiz günde 2 masal. Kitaplığa git veya Premium’a geç.")
+                            .font(MasalFont.labelMedium())
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(c.secondary)
+                            .padding(.horizontal, DesignTokens.Spacing.md)
+                    }
                 }
                 .padding(DesignTokens.Spacing.xl)
             }
             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous))
-            .shadow(color: c.ctaShadow, radius: 20, x: 0, y: 8)
+            .shadow(color: c.ctaShadow.opacity(quotaFull ? 0.35 : 1), radius: 20, x: 0, y: 8)
         }
         .buttonStyle(.plain)
         .disabled(isGenerating || profile == nil)
@@ -394,7 +409,6 @@ struct HomeView: View {
     private func generateStory(profile: ChildProfile?) async {
         guard let profile else { return }
         guard subscription.canGenerateStory() else {
-            showPaywall = true
             return
         }
         isGenerating = true
