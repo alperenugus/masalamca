@@ -2,7 +2,7 @@
 //  AppSyncState.swift
 //  MasalAmca
 //
-//  Tek kayıt — CloudKit ile cihazlar arası: ücretsiz masal kotası, tercih edilen çocuk.
+//  Tek kayıt — CloudKit ile cihazlar arası: toplam üretim sayısı (ücretsiz deneme sınırı), aktif çocuk.
 //
 
 import Foundation

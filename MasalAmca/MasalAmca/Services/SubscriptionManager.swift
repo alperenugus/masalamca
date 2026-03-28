@@ -16,13 +16,15 @@ final class SubscriptionManager {
     static let mockPremiumUserDefaultsKey = "masal_debug_mock_premium"
     #endif
 
-    /// Ücretsiz: takvim günü başına en fazla 2 üretim (premium’da kullanılmaz).
-    private static let freeDailyDateKey = "masal_free_daily_gen_date"
-    private static let freeDailyCountKey = "masal_free_daily_gen_count"
+    /// Ücretsiz: uygulama ömrünce en fazla bu kadar üretim; sonra paywall.
+    static let freeTierLifetimeGenerationLimit = 2
+
+    /// Premium: yerel gün başına en fazla bu kadar yeni masal (SwiftData’daki bugünkü kayıt sayısı ile kontrol).
+    static let premiumDailyGenerationLimit = 2
 
     var products: [Product] = []
     var isPremium: Bool = false
-    /// Ömür boyu / analitik için CloudKit (`AppSyncState`); günlük kota ayrı tutulur.
+    /// Toplam üretim sayısı; CloudKit (`AppSyncState`) ile eşlenir — ücretsiz kota buradan.
     var storiesGeneratedCount: Int = 0
 
     private var updatesTask: Task<Void, Never>?
@@ -92,40 +94,18 @@ final class SubscriptionManager {
         await refreshEntitlements()
     }
 
-    private func startOfToday() -> Date {
-        Calendar.current.startOfDay(for: Date())
-    }
-
-    /// Bugün (yerel takvim) ücretsiz kullanıcı kaç masal üretti — yalnızca UserDefaults.
-    func freeStoriesGeneratedTodayCount() -> Int {
-        let today = startOfToday().timeIntervalSince1970
-        let stored = UserDefaults.standard.double(forKey: Self.freeDailyDateKey)
-        guard stored == today else { return 0 }
-        return UserDefaults.standard.integer(forKey: Self.freeDailyCountKey)
-    }
-
-    /// Ücretsiz günlük kota: hem yerel sayaç hem SwiftData’daki bugünkü masallar.
-    /// Uygulama silinip CloudKit ile masallar geri gelince UserDefaults sıfırlanır; mağaza sayısı kotayı korur.
+    /// Ücretsiz: `storiesGeneratedCount` (CloudKit) ömür boyu kota.
+    /// Premium: `storiesCreatedTodayFromStore` bugün (yerel takvim) oluşturulmuş masal sayısı — günlük kota.
     func canGenerateStory(storiesCreatedTodayFromStore: Int = 0) -> Bool {
-        if isPremium { return true }
-        let fromDefaults = freeStoriesGeneratedTodayCount()
-        let usedToday = max(fromDefaults, storiesCreatedTodayFromStore)
-        return usedToday < 2
+        if isPremium {
+            return storiesCreatedTodayFromStore < Self.premiumDailyGenerationLimit
+        }
+        return storiesGeneratedCount < Self.freeTierLifetimeGenerationLimit
     }
 
     func registerStoryGenerated(modelContext: ModelContext) {
         storiesGeneratedCount += 1
         AppSyncPersistence.persistStoryGenerationCount(storiesGeneratedCount, modelContext: modelContext)
-        guard !isPremium else { return }
-        let today = startOfToday().timeIntervalSince1970
-        let stored = UserDefaults.standard.double(forKey: Self.freeDailyDateKey)
-        if stored != today {
-            UserDefaults.standard.set(today, forKey: Self.freeDailyDateKey)
-            UserDefaults.standard.set(1, forKey: Self.freeDailyCountKey)
-        } else {
-            let c = UserDefaults.standard.integer(forKey: Self.freeDailyCountKey)
-            UserDefaults.standard.set(c + 1, forKey: Self.freeDailyCountKey)
-        }
     }
 
     func canUseSound(_ sound: MixerSound) -> Bool {
@@ -139,13 +119,6 @@ extension SubscriptionManager {
     func applyTestingState(premium: Bool, storiesGenerated: Int) {
         isPremium = premium
         storiesGeneratedCount = storiesGenerated
-        let today = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
-        UserDefaults.standard.set(today, forKey: Self.freeDailyDateKey)
-        if premium {
-            UserDefaults.standard.set(0, forKey: Self.freeDailyCountKey)
-        } else {
-            UserDefaults.standard.set(min(storiesGenerated, 2), forKey: Self.freeDailyCountKey)
-        }
     }
 
     var mockPremiumForLocalTesting: Bool {

@@ -51,16 +51,16 @@ struct PaywallView: View {
                         )
                         .clipShape(Capsule())
 
-                        Text("Sınırsız Hayal Gücü")
+                        Text("Premium ile Her Gün Yeni Masallar")
                             .font(MasalFont.headlineMedium())
                             .foregroundStyle(c.onSurface)
-                        Text("Masal Amca'nın tüm hazinelerini keşfet")
+                        Text("Günde 2 yeni masal üret, tüm premium sesleri ve senkronu aç")
                             .font(MasalFont.bodyMedium())
                             .foregroundStyle(c.secondary)
                     }
 
                     VStack(spacing: DesignTokens.Spacing.md) {
-                        featureRow(icon: "book.pages.fill", title: "Sınırsız Hikaye", subtitle: "Her gün yeni bir macera")
+                        featureRow(icon: "book.pages.fill", title: "Günde 2 Yeni Masal", subtitle: "Her gün taze hikâyeler üret")
                         featureRow(icon: "waveform", title: "Premium AI Sesler", subtitle: "En doğal ve rahatlatıcı tonlar")
                         featureRow(icon: "icloud.fill", title: "CloudKit Senkronizasyon", subtitle: "Tüm cihazlarında kaldığın yerden devam et")
                     }

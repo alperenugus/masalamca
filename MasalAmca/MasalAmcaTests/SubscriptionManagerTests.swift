@@ -18,16 +18,9 @@ final class SubscriptionManagerTests: XCTestCase {
         XCTAssertFalse(sub.canGenerateStory())
     }
 
-    func testStoryQuotaPremium() {
+    func testStoryQuotaPremiumDailyCap() {
         let sub = SubscriptionManager()
         sub.applyTestingState(premium: true, storiesGenerated: 50)
-        XCTAssertTrue(sub.canGenerateStory())
-    }
-
-    /// Uygulama silinip UserDefaults sıfırlansa bile SwiftData’daki bugünkü masal sayısı kotayı doldurur.
-    func testStoryQuotaUsesStoreCountWhenDefaultsReset() {
-        let sub = SubscriptionManager()
-        sub.applyTestingState(premium: false, storiesGenerated: 0)
         XCTAssertTrue(sub.canGenerateStory(storiesCreatedTodayFromStore: 0))
         XCTAssertTrue(sub.canGenerateStory(storiesCreatedTodayFromStore: 1))
         XCTAssertFalse(sub.canGenerateStory(storiesCreatedTodayFromStore: 2))

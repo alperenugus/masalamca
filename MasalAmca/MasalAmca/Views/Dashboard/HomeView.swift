@@ -29,12 +29,29 @@ struct HomeView: View {
 
     private let storyService = StoryService()
 
-    /// Bugün (yerel gün) oluşturulmuş tüm masallar; kota, buluttan dönen kayıtlarla da tutarlı kalır.
-    private var storiesCreatedTodayCount: Int {
+    private func todayStartEnd() -> (start: Date, end: Date) {
         let cal = Calendar.current
         let start = cal.startOfDay(for: Date())
-        guard let end = cal.date(byAdding: .day, value: 1, to: start) else { return 0 }
+        let end = cal.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86400)
+        return (start, end)
+    }
+
+    /// Bugün (yerel takvim) oluşturulmuş tüm masallar — Premium günlük kota.
+    private var storiesCreatedTodayCount: Int {
+        let (start, end) = todayStartEnd()
         return stories.filter { $0.createdAt >= start && $0.createdAt < end }.count
+    }
+
+    /// Ücretsiz: ömür boyu 2 üretim sonrası paywall.
+    private var freeTrialExhausted: Bool {
+        !subscription.isPremium
+            && subscription.storiesGeneratedCount >= SubscriptionManager.freeTierLifetimeGenerationLimit
+    }
+
+    /// Premium: bugün zaten 2 masal üretildiyse yeni üretim yok (ertesi güne kadar).
+    private var premiumDailyQuotaReached: Bool {
+        subscription.isPremium
+            && storiesCreatedTodayCount >= SubscriptionManager.premiumDailyGenerationLimit
     }
 
     var body: some View {
@@ -202,33 +219,40 @@ struct HomeView: View {
 
     private func generateButton(profile: ChildProfile?) -> some View {
         let c = theme.colors
-        let canGen = subscription.canGenerateStory(storiesCreatedTodayFromStore: storiesCreatedTodayCount)
-        let quotaFull = !subscription.isPremium && !canGen
+        let canGenerateNew = subscription.canGenerateStory(storiesCreatedTodayFromStore: storiesCreatedTodayCount)
         return Button {
-            if canGen {
-                Task { await generateStory(profile: profile) }
-            } else {
+            if freeTrialExhausted {
+                showPaywall = true
+            } else if premiumDailyQuotaReached {
                 tabSelection = .library
+            } else if canGenerateNew {
+                Task { await generateStory(profile: profile) }
             }
         } label: {
             ZStack {
                 LinearGradient(
-                    colors: quotaFull
+                    colors: (freeTrialExhausted || premiumDailyQuotaReached)
                         ? [c.surfaceContainerHigh, c.surfaceContainer]
                         : [c.primaryContainer, c.primary],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 VStack(spacing: DesignTokens.Spacing.md) {
-                    Image(systemName: quotaFull ? "books.vertical.fill" : "sparkles")
+                    Image(systemName: freeTrialExhausted ? "crown.fill" : (premiumDailyQuotaReached ? "calendar.badge.clock" : "sparkles"))
                         .font(.system(size: 36))
-                        .foregroundStyle(quotaFull ? c.primary.opacity(0.85) : c.onPrimaryContainer)
-                    Text(quotaFull ? "BUGÜNLÜK KOTA DOLDU — KİTAPLIK" : "BU GECEKİ MASALI ÜRET")
+                        .foregroundStyle((freeTrialExhausted || premiumDailyQuotaReached) ? c.primary.opacity(0.85) : c.onPrimaryContainer)
+                    Text(buttonTitle)
                         .font(MasalFont.titleMedium())
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(quotaFull ? c.onSurface : c.onPrimaryContainer)
-                    if quotaFull {
-                        Text("Ücretsiz günde 2 masal. Kitaplığa git veya Premium’a geç.")
+                        .foregroundStyle((freeTrialExhausted || premiumDailyQuotaReached) ? c.onSurface : c.onPrimaryContainer)
+                    if freeTrialExhausted {
+                        Text("2 ücretsiz masalını kullandın. Premium ile her gün 2 yeni masal üretebilirsin.")
+                            .font(MasalFont.labelMedium())
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(c.secondary)
+                            .padding(.horizontal, DesignTokens.Spacing.md)
+                    } else if premiumDailyQuotaReached {
+                        Text("Bugün 2 masal ürettin. Yarın yeni masal için dön veya kitaplığındakileri dinle.")
                             .font(MasalFont.labelMedium())
                             .multilineTextAlignment(.center)
                             .foregroundStyle(c.secondary)
@@ -238,10 +262,16 @@ struct HomeView: View {
                 .padding(DesignTokens.Spacing.xl)
             }
             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous))
-            .shadow(color: c.ctaShadow.opacity(quotaFull ? 0.35 : 1), radius: 20, x: 0, y: 8)
+            .shadow(color: c.ctaShadow.opacity((freeTrialExhausted || premiumDailyQuotaReached) ? 0.35 : 1), radius: 20, x: 0, y: 8)
         }
         .buttonStyle(.plain)
-        .disabled(isGenerating || profile == nil)
+        .disabled(isGenerating || (!freeTrialExhausted && !premiumDailyQuotaReached && profile == nil))
+    }
+
+    private var buttonTitle: String {
+        if freeTrialExhausted { return "PREMIUM'A GEÇ" }
+        if premiumDailyQuotaReached { return "BUGÜNLÜK KOTA DOLDU — KİTAPLIK" }
+        return "BU GECEKİ MASALI ÜRET"
     }
 
     private func recentSection(active: ChildProfile?) -> some View {
@@ -444,9 +474,7 @@ struct HomeView: View {
     @MainActor
     private func generateStory(profile: ChildProfile?) async {
         guard let profile else { return }
-        guard subscription.canGenerateStory(storiesCreatedTodayFromStore: storiesCreatedTodayCount) else {
-            return
-        }
+        guard subscription.canGenerateStory(storiesCreatedTodayFromStore: storiesCreatedTodayCount) else { return }
         isGenerating = true
         defer { isGenerating = false }
 
