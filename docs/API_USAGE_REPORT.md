@@ -9,15 +9,30 @@ Bu belge, uygulamanın **dış API’lere** nasıl bağlandığını, hangi **mo
 | Katman | Rol |
 |--------|-----|
 | **iOS uygulaması** | SwiftUI + SwiftData. `StoryService` ile yalnızca **Cloudflare Worker** tabanlı proxy’ye konuşur; API anahtarları uygulamada **tutulmaz** (yalnızca `ProxyBaseURL`, isteğe bağlı `ProxyAuthToken`, `ElevenLabsVoiceID` gibi uç yapılandırma). |
-| **Edge proxy** (`edge/src/index.ts`) | `POST /v1/story` → OpenAI; `POST /v1/tts` → ElevenLabs. Bearer token ile korunabilir. |
+| **Edge proxy** (`edge/src/index.ts`, `edge/src/storySeeds.ts`) | `POST /v1/story` → OpenAI (her istekte rastgele **çeşitlilik ipuçları**); `POST /v1/tts` → ElevenLabs TTS. Bearer token ile korunabilir. |
 | **OpenAI** | Masal metni (JSON). |
-| **ElevenLabs** | Masal gövdesinin seslendirilmesi (MP3). |
+| **ElevenLabs** | Yalnızca masal gövdesinin **TTS** ile seslendirilmesi (MP3). |
 
 ---
 
-## 2. Uç noktalar ve modeller
+## 2. ElevenLabs paneli: TTS ile müzik üretimini karıştırmayın
 
-### 2.1 `POST /v1/story` (OpenAI)
+ElevenLabs **Analytics → Usage** ekranı, hesabınızdaki **tüm** kredi tüketen ürünleri (farklı modeller / hatlar) **tek grafikte** toplayabilir. Masal Amca üretim hattında kullanılan şey:
+
+| Ürün / hat (örnek panel etiketi) | Masal Amca ile ilişki |
+|----------------------------------|------------------------|
+| **Text to Speech** (ör. Eleven Multilingual, Flash, …) | **Evet** — `POST /v1/tts` bu hattı kullanır; masal metni uzunluğuna göre karakter / kredi. |
+| **Music, `music_v1` vb.** | **Hayır** — uygulama içi **beyaz gürültü döngüleri yerel (bundle)**; bu müzik üretimi masal proxy’sinden **çağrılmaz**. Panelde gördüğünüz büyük **music** spike’ları genelde **ElevenLabs müzik aracı / API** ile deneme veya başka projelerden gelir. |
+
+**Sonuç:** Toplam “Credit Usage” veya “Total Cost” rakamı, **masal TTS maliyetini tek başına göstermez**. Maliyet kökü analizi için panelde **ürün veya model kırılımına** (TTS satırı vs müzik satırı) bakın. Örnek: bir gecede **~73K kredi müzik**, **~8K kredi TTS** gibi bir dağılımda, masal ürününün baskın maliyeti **müzik denemesi** olabilir; **Flash ↔ Multilingual** seçiminden bağımsızdır.
+
+**Öneri (model seçimi):** Baskın maliyet **müzik** kaynaklıysa, paneldeki toplam spike’ı TTS değişimi tek başına “düzeltmez”; yine de masal hattında **Flash** ile **Multilingual** arasında **kalite / birim fiyat** takası yapılabilir. Şu an proxy’de lansman için **Flash v2.5** kullanılıyor; Türkçe uzun anlatım kalitesi yetersiz kalırsa **`eleven_multilingual_v2`**’ye dönüş planlanabilir.
+
+---
+
+## 3. Uç noktalar ve modeller
+
+### 3.1 `POST /v1/story` (OpenAI)
 
 | Alan | Değer |
 |------|--------|
@@ -34,19 +49,21 @@ Bu belge, uygulamanın **dış API’lere** nasıl bağlandığını, hangi **mo
 - `themes` — string dizisi (Masal Ayarları bento temalarından Türkçe ipuçları; bazı seçenekler birden fazla ipucu gönderebilir)  
 - `behavioral_goal` — isteğe bağlı  
 - `language` — `"tr"`  
-- `target_length` — isteğe bağlı: `short` \| `medium` \| `long` (~1 / ~3 / ~5 dk hedef süre + kelime bandı + TTS için noktalama kuralları)
+- `target_length` — isteğe bağlı: `short` \| `medium` \| `long` (~3 / ~5 / ~10 dk hedef süre + kelime bandı + TTS noktalama kuralları)
+
+**Worker tarafı (iOS gövdesinde yok):** Her `/v1/story` çağrısında `storySeeds.ts` içinden **mekân, yan karakter, olay çekirdeği, aile/yakınlık, nesne** için rastgele örnekler seçilir ve kullanıcı mesajına Türkçe bir **çeşitlilik bloğu** olarak eklenir (`crypto.getRandomValues`). Amaç aynı temalarda tekrarlayan örgüleri çeşitlendirmek.
 
 **Yanıt (proxy → uygulama):** `title`, `body`, `genre`, `word_count`, `model`.
 
 ---
 
-### 2.2 `POST /v1/tts` (ElevenLabs)
+### 3.2 `POST /v1/tts` (ElevenLabs)
 
 | Alan | Değer |
 |------|--------|
 | **HTTP** | `POST`, gövde JSON |
 | **Upstream** | `https://api.elevenlabs.io/v1/text-to-speech/{voice_id}` |
-| **TTS modeli** | **`eleven_flash_v2_5`** (isteğe bağlı `language_code: tr`) |
+| **TTS modeli** | **`eleven_flash_v2_5`** (lansman: daha düşük birim maliyet; `language_code: tr` — API reddederse Worker’da kaldırılabilir) |
 | **Ses** | İstekteki `voice_id`; `"default"` veya boşsa Worker ortamındaki `ELEVENLABS_VOICE_ID` |
 
 **İstek gövdesi:** `text`, `voice_id`, `output_format` (uygulama: `mp3_44100_128`).
@@ -55,31 +72,34 @@ Bu belge, uygulamanın **dış API’lere** nasıl bağlandığını, hangi **mo
 
 ---
 
-## 3. Prompt’lar (özet)
+## 4. Prompt’lar (özet)
 
-### 3.1 System prompt (masal üretimi)
+### 4.1 System prompt (masal üretimi)
 
 Worker içinde `systemPromptForAge(ageHint, targetLength)` ile oluşturulur. Özet kurallar:
 
 - Türkçe, çocuk uyku masalı.  
 - Şiddet, korku, yaralanma, **ölüm yok**.  
 - Çocuk kahraman; yaş grubuna uygun kelime hazısı (`ageHint`).  
-- Uzunluk: `target_length` ile **hedef dinleme süresi** (~1 dk / ~3 dk / ~5 dk) ve buna uygun **kelime bantları** (ör. ~90–130, ~280–380, ~480–620).  
+- Uzunluk: `target_length` ile **hedef dinleme süresi** (~3 dk / ~5 dk / ~10 dk) ve **kelime bantları** (kabaca ~250–350, ~400–650, ~650–950).  
 - ElevenLabs TTS için **noktalama** (duraklar, tırnak, abartısız ünlem, ALL CAPS yok).  
+- **Çeşitlilik:** Aynı temalar tekrarlansa bile farklı olay örgüsü; kullanıcı mesajındaki ipuçları yön verir, klişeden kaçın.  
 - Sıcak, yatıştırıcı ton.  
 - **JSON:** `{"title":"...","body":"...","genre":"calming|adventure|educational"}`.
 
-### 3.2 User mesajı (masal)
+### 4.2 User mesajı (masal)
 
-Örnek şablon:
+Örnek şablon (üst kısım):
 
 `Çocuğun adı: … Yaş grubu: … Temalar: … [Davranış hedefi: …] Masalı bu profile göre kişiselleştir.`
 
 Temalar, uygulamadan gelen `themes[]` dizisinin virgülle birleştirilmiş hali.
 
+Altına Worker her seferinde ekler: **çeşitlilik ipuçları** (mekân, yan karakter, olay çekirdeği, isteğe bağlı aile dokunuşu, nesne) — ayrıntı için `edge/src/storySeeds.ts`.
+
 ---
 
-## 4. Güvenlik ve güvenlik önlemleri
+## 5. Güvenlik ve güvenlik önlemleri
 
 | Önlem | Açıklama |
 |--------|-----------|
@@ -94,7 +114,7 @@ Ek olarak uygulama tarafında **ücretsiz katmanda** üretim sayısı sınırlı
 
 ---
 
-## 5. Apple / sistem API’leri (AI değil)
+## 6. Apple / sistem API’leri (AI değil)
 
 - **StoreKit 2** — abonelik ve haklar.  
 - **SwiftData / CloudKit** (yapılandırmaya bağlı) — yerel / senkron veri.  
@@ -103,36 +123,33 @@ Ek olarak uygulama tarafında **ücretsiz katmanda** üretim sayısı sınırlı
 
 ---
 
-## 6. Finansal tahmin: kullanıcı başına **günde en fazla 2 masal**
+## 7. Finansal çerçeve (masal hattı)
 
-Aşağıdaki tablo **yalnızca API maliyeti** içindir; altyapı (Worker, iCloud, App Store komisyonu, vergi) hariç.
+Aşağıdaki tablo **yalnızca masal üretim API maliyeti** (OpenAI + **TTS**) içindir; **ElevenLabs müzik üretimi yok**. Altyapı (Worker, iCloud, App Store komisyonu, vergi) hariç.
 
 Varsayımlar (güncel fiyatları kendi sözleşmenizden doğrulayın):
 
-- **OpenAI `gpt-4o-mini`:** tipik masal çağrısı ~1–2k token girdi + ~800–1.200 token çıktı (orta uzunluk metin). Birleşik maliyet çoğu senaryoda **masal başına ~US$0.001–0.005** bandında kalabilir (token başına fiyatlarınıza göre değişir).  
-- **ElevenLabs `eleven_flash_v2_5`:** karakter / kredi; çok dilli v2’ye göre genelde daha düşük birim fiyat (planınıza göre). Kısa masallar (~1 dk hedef) karakter sayısını belirgin düşürür; **masal başına** aralık metin uzunluğuna ve tarifenize göre değişir.
+- **OpenAI `gpt-4o-mini`:** tipik masal çağrısı girdi + çıktı token’ları; çoğu senaryoda **masal başına ~US$0.001–0.006** bandı (uzunluk ve modele göre).  
+- **ElevenLabs TTS (`eleven_flash_v2_5` — lansman):** **karakter / kredi**; planınıza göre çok dilli v2’den genelde daha uygun birim maliyet. **Uzun masal** daha çok karakter demektir. Kalite yetersizse **`eleven_multilingual_v2`**’ye geçiş değerlendirilir. Panelde **yalnızca TTS satırını** filtreleyerek izleyin (müzik karışmasın).
 
-**Günde 2 masal / kullanıcı:**
+**Günde 2 masal / kullanıcı** (kabaca, TTS ağırlıklı):
 
 | Bileşen | Düşük tahmin (2 masal/gün) | Yüksek tahmin (2 masal/gün) |
 |---------|---------------------------|----------------------------|
-| OpenAI | ~US$0.002–0.01 | ~US$0.02 |
-| ElevenLabs | ~US$0.06–0.15 | ~US$0.24 |
-| **Toplam (yaklaşık)** | **~US$0.07–0.16 / kullanıcı / gün** | **~US$0.25+ / kullanıcı / gün** |
+| OpenAI | ~US$0.002–0.012 | ~US$0.03 |
+| ElevenLabs TTS | ~US$0.04–0.12 | ~US$0.35+ |
+| **Toplam (yaklaşık)** | **~US$0.05–0.14 / kullanıcı / gün** | **~US$0.38+ / kullanıcı / gün** |
 
-**Örnek ölçek (yalnızca API):**
+Üst sınır, **uzun** seçenek ve yüksek tarife varsayımlarıyla büyür; **müzik üretimi** bu tabloda yoktur.
 
-- 1.000 aktif kullanıcı, hepsi günde 2 masal, “orta” tahmin ~US$0.10/kullanıcı/gün → **~US$100/gün** ≈ **~US$3.000/ay**.  
-- Aynı senaryoda sadece OpenAI genelde toplamın küçük bir kısmı; **TTS baskın maliyet** olmaya devam eder.
-
-**Maliyeti düşürmek için:** daha kısa hedef süre (`short` ≈ 1 dk), Flash TTS modeli, önbellek (aynı metni tekrar TTS etmeme), günlük üst sınır veya kısmi `AVSpeechSynthesizer` yedeği (kalite takası).
+**Maliyeti düşürmek (masal hattı):** daha kısa `target_length`, TTS’de Flash (şu an lansmanda açık), aynı metni tekrar TTS etmeme (önbellek), günlük üst sınır veya `AVSpeechSynthesizer` yedeği (kalite takası). **Müzik denemelerini** aynı API anahtarında sınırlamak veya ayrı proje / anahtar kullanmak, paneldeki toplam gürültüyü azaltır.
 
 ---
 
-## 7. Kod referansları
+## 8. Kod referansları
 
-- Proxy: `edge/src/index.ts`  
+- Proxy: `edge/src/index.ts`, `edge/src/storySeeds.ts`  
 - iOS istek DTO’ları: `MasalAmca/MasalAmca/Services/PromptOrchestrator.swift`, `StoryService.swift`  
 - Tema / uzunluk: `MasalAmca/MasalAmca/Models/StoryPreferences.swift`  
 
-*Son güncelleme: repo içi kodla uyumlu; fiyatlandırma tahminleri bilgilendirme amaçlıdır.*
+*Son güncelleme: repo içi kodla uyumlu; ElevenLabs toplam kullanımı TTS + müzik + diğer ürünleri kapsayabilir — masal maliyeti için kırılım kullanın.*

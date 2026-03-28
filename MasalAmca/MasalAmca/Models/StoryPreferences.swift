@@ -15,18 +15,18 @@ enum StoryLengthPreference: String, CaseIterable, Sendable {
 
     var displayTitle: String {
         switch self {
-        case .short: "Kısa (1 dk)"
-        case .medium: "Orta (3 dk)"
-        case .long: "Uzun (5 dk)"
+        case .short: "Kısa (3 dk)"
+        case .medium: "Orta (5 dk)"
+        case .long: "Uzun (10 dk)"
         }
     }
 
     /// Kabaca hedef dinleme süresi (TTS tempoyu profil bazında bilmediğimiz için UI / meta).
     var targetListeningDurationSeconds: Int {
         switch self {
-        case .short: 60
-        case .medium: 180
-        case .long: 300
+        case .short: 180
+        case .medium: 300
+        case .long: 600
         }
     }
 }

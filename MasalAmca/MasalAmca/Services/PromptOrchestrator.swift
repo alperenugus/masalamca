@@ -11,7 +11,7 @@ struct StoryGenerateRequestDTO: Codable, Sendable {
     var themes: [String]
     var behavioralGoal: String?
     var language: String
-    /// `short` | `medium` | `long` — edge proxy: hedef süre (~1 / ~3 / ~5 dk) + kelime bandı.
+    /// `short` | `medium` | `long` — edge proxy: hedef süre (~3 / ~5 / ~10 dk) + kelime bandı.
     var targetLength: String?
 
     enum CodingKeys: String, CodingKey {

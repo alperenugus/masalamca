@@ -3,6 +3,8 @@
  * Set secrets: OPENAI_API_KEY, ELEVENLABS_API_KEY, PROXY_AUTH_TOKEN (optional voice id in ELEVENLABS_VOICE_ID)
  */
 
+import { buildVariationBlock, sampleStorySeeds } from "./storySeeds";
+
 export interface Env {
   OPENAI_API_KEY: string;
   ELEVENLABS_API_KEY: string;
@@ -17,11 +19,11 @@ interface StoryRequest {
   themes: string[];
   behavioral_goal?: string;
   language: string;
-  /** "short" | "medium" | "long" — hedef dinleme süresi + kelime bandı */
+  /** "short" | "medium" | "long" — ~3 / ~5 / ~10 dk hedef + kelime bandı */
   target_length?: string;
 }
 
-/** ElevenLabs TTS (maliyet / gecikme için Flash v2.5). */
+/** Lansman: düşük birim maliyet; kalite için `eleven_multilingual_v2`ye dönülebilir. */
 const ELEVEN_TTS_MODEL = "eleven_flash_v2_5";
 
 interface TTSRequest {
@@ -33,11 +35,11 @@ interface TTSRequest {
 function lengthWordGuidance(target?: string): string {
   switch (target) {
     case "short":
-      return "Hedef dinleme süresi yaklaşık 1 dakika (sakin anlatım). Gövde için kabaca 90-130 kelime; gereksiz tekrar yok, öz ama tam bir mini masal.";
+      return "Hedef dinleme süresi yaklaşık 3 dakika (sakin anlatım). Gövde için kabaca 250-350 kelime; kısa ve öz ama tam bir masal.";
     case "long":
-      return "Hedef dinleme süresi yaklaşık 5 dakika. Gövde için kabaca 480-620 kelime; olayı tamamla, sakin tempoda okunabilir paragraflar.";
+      return "Hedef dinleme süresi yaklaşık 10 dakika. Gövde için kabaca 650-950 kelime; olayı tamamla, sakin tempoda okunabilir paragraflar.";
     default:
-      return "Hedef dinleme süresi yaklaşık 3 dakika. Gövde için kabaca 280-380 kelime; baş-orta-son dengeli, uyku öncesi ritim.";
+      return "Hedef dinleme süresi yaklaşık 5 dakika. Gövde için kabaca 400-650 kelime; baş-orta-son dengeli, uyku öncesi ritim.";
   }
 }
 
@@ -52,6 +54,7 @@ Kurallar:
 - Çocuk kahraman olsun; yaşa uygun kelime hazısı (${ageHint}).
 - ${len}
 - ${ELEVEN_TTS_STYLE_RULES}
+- Aynı temalar tekrarlansa bile her masalda farklı olay örgüsü ve farklı yardımcı unsur kullan; kullanıcıdaki çeşitlilik ipuçları zorunlu kontrol listesi değil, yön veren önerilerdir. Klişe kalıplardan kaçın.
 - Sıcak, yatıştırıcı ton.
 - JSON döndür: {"title":"...","body":"...","genre":"calming|adventure|educational"}`;
 }
@@ -103,7 +106,10 @@ async function handleStory(request: Request, env: Env): Promise<Response> {
   }
 
   const hint = ageGroupHint(body.age_group);
-  const user = `Çocuğun adı: ${body.child_name}. Yaş grubu: ${body.age_group}. Temalar: ${body.themes.join(", ")}. ${body.behavioral_goal ? "Davranış hedefi: " + body.behavioral_goal + "." : ""} Masalı bu profile göre kişiselleştir.`;
+  const themesText = body.themes.length ? body.themes.join(", ") : "(tema belirtilmedi)";
+  const baseUser = `Çocuğun adı: ${body.child_name}. Yaş grubu: ${body.age_group}. Temalar: ${themesText}. ${body.behavioral_goal ? "Davranış hedefi: " + body.behavioral_goal + "." : ""} Masalı bu profile göre kişiselleştir.`;
+  const seeds = sampleStorySeeds();
+  const user = `${baseUser}\n\n${buildVariationBlock(seeds)}`;
 
   const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
