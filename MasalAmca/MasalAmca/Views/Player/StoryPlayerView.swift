@@ -55,6 +55,9 @@ struct StoryPlayerView: View {
             ScrollView {
                 VStack(spacing: DesignTokens.Spacing.lg) {
                     header
+                    if sleepTimer.isRunning {
+                        sleepTimerBanner
+                    }
                     hero
                     titles
                     if hasPlayableAudio {
@@ -256,6 +259,54 @@ struct StoryPlayerView: View {
                 .foregroundStyle(c.primary)
         }
         .padding(.top, 8)
+    }
+
+    private var sleepTimerBanner: some View {
+        let c = theme.colors
+        let sec = max(0, Int(sleepTimer.remaining.rounded(.down)))
+        let m = sec / 60
+        let s = sec % 60
+        return HStack(spacing: DesignTokens.Spacing.sm) {
+            Image(systemName: "moon.zzz.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(c.primary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Uyku zamanlayıcısı")
+                    .font(MasalFont.labelSmall())
+                    .foregroundStyle(c.onSurfaceVariant)
+                Text(String(format: "%d:%02d", m, s))
+                    .font(.custom(MasalFont.headlineFamily, size: 22, relativeTo: .title3).weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(c.primary)
+            }
+            Spacer(minLength: 8)
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                sleepTimer.cancel()
+            } label: {
+                Text("İptal")
+                    .font(MasalFont.labelMedium())
+                    .fontWeight(.semibold)
+                    .foregroundStyle(c.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(c.surfaceContainerHighest.opacity(0.5))
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Zamanlayıcıyı iptal et")
+        }
+        .padding(.horizontal, DesignTokens.Spacing.md)
+        .padding(.vertical, DesignTokens.Spacing.sm + 2)
+        .background(
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                .fill(c.surfaceContainer.opacity(0.95))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                .strokeBorder(c.primary.opacity(0.12), lineWidth: 1)
+        }
+        .accessibilityElement(children: .contain)
     }
 
     private var hero: some View {

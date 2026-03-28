@@ -38,22 +38,16 @@ struct StoryReadView: View {
         let c = theme.colors
         VStack(spacing: 0) {
             topBar(c: c)
-            GeometryReader { _ in
-                ZStack(alignment: .bottom) {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 0) {
-                            readHero(c: c)
-                                .padding(.top, DesignTokens.Spacing.md)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    readHero(c: c)
+                        .padding(.top, DesignTokens.Spacing.md)
 
-                            articleBody(c: c)
-                                .padding(.top, DesignTokens.Spacing.xl)
-                        }
-                        .padding(.horizontal, DesignTokens.Spacing.lg)
-                        .padding(.bottom, 120)
-                    }
-
-                    bottomChrome(c: c)
+                    articleBody(c: c)
+                        .padding(.top, DesignTokens.Spacing.xl)
                 }
+                .padding(.horizontal, DesignTokens.Spacing.lg)
+                .padding(.bottom, DesignTokens.Spacing.xxl)
             }
         }
         .background(c.surface.ignoresSafeArea())
@@ -217,51 +211,5 @@ struct StoryReadView: View {
                 }
             )
             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous))
-    }
-
-    private func bottomChrome(c: DreamscapePalette) -> some View {
-        HStack {
-            Spacer()
-            Button {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                onFinish()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Bitir")
-                        .font(MasalFont.labelMedium())
-                        .fontWeight(.bold)
-                }
-                .foregroundStyle(c.onPrimaryContainer)
-                .padding(.horizontal, 28)
-                .padding(.vertical, 14)
-                .background(
-                    LinearGradient(
-                        colors: [c.primaryContainer, c.primary],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .clipShape(Capsule())
-                .shadow(color: c.ctaShadow, radius: 14, x: 0, y: 6)
-            }
-            .buttonStyle(.plain)
-            Spacer()
-        }
-        .padding(.top, DesignTokens.Spacing.md)
-        .padding(.horizontal, DesignTokens.Spacing.lg)
-        .padding(.bottom, DesignTokens.Spacing.md)
-        .background(c.surfaceContainer.opacity(0.78))
-        .background(.ultraThinMaterial)
-        .clipShape(
-            UnevenRoundedRectangle(
-                topLeadingRadius: DesignTokens.Radius.xl,
-                bottomLeadingRadius: 0,
-                bottomTrailingRadius: 0,
-                topTrailingRadius: DesignTokens.Radius.xl,
-                style: .continuous
-            )
-        )
-        .shadow(color: c.ctaShadow.opacity(0.35), radius: 20, x: 0, y: -8)
     }
 }
