@@ -96,7 +96,7 @@ final class SubscriptionManager {
         Calendar.current.startOfDay(for: Date())
     }
 
-    /// Bugün (yerel takvim) ücretsiz kullanıcı kaç masal üretti.
+    /// Bugün (yerel takvim) ücretsiz kullanıcı kaç masal üretti — yalnızca UserDefaults.
     func freeStoriesGeneratedTodayCount() -> Int {
         let today = startOfToday().timeIntervalSince1970
         let stored = UserDefaults.standard.double(forKey: Self.freeDailyDateKey)
@@ -104,9 +104,13 @@ final class SubscriptionManager {
         return UserDefaults.standard.integer(forKey: Self.freeDailyCountKey)
     }
 
-    func canGenerateStory() -> Bool {
+    /// Ücretsiz günlük kota: hem yerel sayaç hem SwiftData’daki bugünkü masallar.
+    /// Uygulama silinip CloudKit ile masallar geri gelince UserDefaults sıfırlanır; mağaza sayısı kotayı korur.
+    func canGenerateStory(storiesCreatedTodayFromStore: Int = 0) -> Bool {
         if isPremium { return true }
-        return freeStoriesGeneratedTodayCount() < 2
+        let fromDefaults = freeStoriesGeneratedTodayCount()
+        let usedToday = max(fromDefaults, storiesCreatedTodayFromStore)
+        return usedToday < 2
     }
 
     func registerStoryGenerated(modelContext: ModelContext) {

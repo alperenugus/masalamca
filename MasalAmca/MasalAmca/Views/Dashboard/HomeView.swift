@@ -29,6 +29,14 @@ struct HomeView: View {
 
     private let storyService = StoryService()
 
+    /// Bugün (yerel gün) oluşturulmuş tüm masallar; kota, buluttan dönen kayıtlarla da tutarlı kalır.
+    private var storiesCreatedTodayCount: Int {
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: Date())
+        guard let end = cal.date(byAdding: .day, value: 1, to: start) else { return 0 }
+        return stories.filter { $0.createdAt >= start && $0.createdAt < end }.count
+    }
+
     var body: some View {
         let c = theme.colors
         let active = profileManager.activeProfile(from: profiles)
@@ -194,9 +202,10 @@ struct HomeView: View {
 
     private func generateButton(profile: ChildProfile?) -> some View {
         let c = theme.colors
-        let quotaFull = !subscription.isPremium && !subscription.canGenerateStory()
+        let canGen = subscription.canGenerateStory(storiesCreatedTodayFromStore: storiesCreatedTodayCount)
+        let quotaFull = !subscription.isPremium && !canGen
         return Button {
-            if subscription.canGenerateStory() {
+            if canGen {
                 Task { await generateStory(profile: profile) }
             } else {
                 tabSelection = .library
@@ -435,7 +444,7 @@ struct HomeView: View {
     @MainActor
     private func generateStory(profile: ChildProfile?) async {
         guard let profile else { return }
-        guard subscription.canGenerateStory() else {
+        guard subscription.canGenerateStory(storiesCreatedTodayFromStore: storiesCreatedTodayCount) else {
             return
         }
         isGenerating = true
