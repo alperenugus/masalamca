@@ -28,6 +28,11 @@ final class ChildProfile {
     var preferenceAutoStopAfterStory: Bool = true
     var preferenceBackgroundMusic: Bool = true
 
+    /// Yerel bildirim: yatma saati hatırlatıcısı (çocuk profili başına; yalnızca seçili profil için zamanlanır).
+    var bedtimeReminderEnabled: Bool = false
+    var bedtimeReminderHour: Int = 20
+    var bedtimeReminderMinute: Int = 0
+
     @Relationship(deleteRule: .cascade, inverse: \Story.profile)
     var stories: [Story]
 
@@ -54,6 +59,9 @@ final class ChildProfile {
         self.bentoThemeRaw = ""
         self.preferenceAutoStopAfterStory = true
         self.preferenceBackgroundMusic = true
+        self.bedtimeReminderEnabled = false
+        self.bedtimeReminderHour = 20
+        self.bedtimeReminderMinute = 0
     }
 
     var ageGroup: AgeGroup {

@@ -38,4 +38,17 @@ final class SubscriptionManagerTests: XCTestCase {
         sub.applyTestingState(premium: true, storiesGenerated: 0)
         XCTAssertTrue(sub.canUseSound(.fireplace))
     }
+
+    func testNarratorGating() {
+        let sub = SubscriptionManager()
+        sub.applyTestingState(premium: false, storiesGenerated: 0)
+        XCTAssertTrue(sub.canUseNarrator(.yumuşakBulut))
+        XCTAssertTrue(sub.canUseNarrator(.bilgeDede))
+        XCTAssertFalse(sub.canUseNarrator(.yakamoz))
+        XCTAssertFalse(sub.canUseNarrator(.ruzgar))
+
+        sub.applyTestingState(premium: true, storiesGenerated: 0)
+        XCTAssertTrue(sub.canUseNarrator(.yakamoz))
+        XCTAssertTrue(sub.canUseNarrator(.ruzgar))
+    }
 }

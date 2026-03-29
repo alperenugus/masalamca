@@ -156,7 +156,7 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Bildirimler")
-            .accessibilityHint("Uyku hatırlatıcıları hakkında bilgi")
+            .accessibilityHint("Yatma saati hatırlatıcısı ve bildirim ayarları")
         }
         .padding(.top, 8)
     }

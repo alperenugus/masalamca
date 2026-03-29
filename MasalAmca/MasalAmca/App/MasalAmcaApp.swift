@@ -8,6 +8,10 @@ import SwiftUI
 
 @main
 struct MasalAmcaApp: App {
+    init() {
+        BedtimeNotificationCenter.shared.install()
+    }
+
     @State private var themeManager = ThemeManager()
     @State private var childProfileManager = ChildProfileManager()
     @State private var subscriptionManager = SubscriptionManager()

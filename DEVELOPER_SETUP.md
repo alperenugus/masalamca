@@ -26,8 +26,21 @@ Use this when configuring a new machine or shipping a build.
    - Enable **Push Notifications** capability; update `aps-environment` for production when distributing.
 
 6. **StoreKit**  
-   - In [App Store Connect](https://appstoreconnect.apple.com), create subscription products whose IDs match `AppConfiguration` in the app (e.g. monthly/yearly premium).  
-   - For local testing, add a **StoreKit Configuration** file in Xcode if you do not want to hit the sandbox yet.
+   - In [App Store Connect](https://appstoreconnect.apple.com), create subscription products whose IDs match [`AppConfiguration.ProductID`](MasalAmca/MasalAmca/Services/AppConfiguration.swift) (`alperenugus.MasalAmca.premium.monthly` and `.yearly`).  
+   - **Introductory offer / trial:** Paywall copy is driven from `Product.subscription?.introductoryOffer` when the store returns it. Configure the free trial (or paid intro) in App Store Connect so it matches what users see.  
+   - **Local testing:** In Xcode use **File → New → StoreKit Configuration File** (`.storekit`), add the same product IDs, and set the scheme’s **Run → Options → StoreKit Configuration** to that file so you can test purchases without the sandbox. The repo does not commit a `.storekit` file by default.  
+   - **Sandbox:** Sign in with a sandbox Apple ID under **Settings → Developer** (device) or use the simulator with the configuration file above.
+
+7. **Subscription entitlement model**  
+   - `SubscriptionManager.isPremium` is `true` only when a **verified** transaction appears in `Transaction.currentEntitlements` for one of the configured product IDs.  
+   - There is **no** separate UI for billing grace period, billing retry, or “expired but still in grace” today; those could be added later using `Product.SubscriptionInfo.Status` if needed.
+
+8. **Legal links on the paywall (optional)**  
+   - Add string keys to the main app `Info.plist` if you have live URLs: `TermsOfUseURL`, `PrivacyPolicyURL`. When both are set, the paywall shows tappable links.
+
+9. **Local bedtime reminders**  
+   - Uses **UserNotifications** with a repeating daily `UNCalendarNotificationTrigger`. No extra capability beyond what the app already declares; this is **not** remote APNs marketing.  
+   - Preferences are stored on each **`ChildProfile`** (`bedtimeReminderEnabled`, hour/minute) and only the **active** child’s reminder is scheduled on device.
 
 ---
 

@@ -8,6 +8,15 @@ import StoreKit
 import Observation
 import SwiftData
 
+/// Sonuç: başarılı satın alma, kullanıcı iptali, Ask to Buy beklemede, ağ/Store hatası veya doğrulanamayan işlem.
+enum PurchaseOutcome: Sendable {
+    case purchased
+    case userCancelled
+    case pending
+    case failed(String)
+    case unverified
+}
+
 @MainActor
 @Observable
 final class SubscriptionManager {
@@ -23,6 +32,8 @@ final class SubscriptionManager {
     static let premiumDailyGenerationLimit = 2
 
     var products: [Product] = []
+    /// `true` yalnızca doğrulanmış ve geçerli abonelik işlemi `Transaction.currentEntitlements` içindeyken.
+    /// Faturalama yeniden deneme süreci veya süresi dolmuş abonelik için ayrı durum göstermiyoruz (StoreKit 2 ayrıntısı ileride eklenebilir).
     var isPremium: Bool = false
     /// Toplam üretim sayısı; CloudKit (`AppSyncState`) ile eşlenir — ücretsiz kota buradan.
     var storiesGeneratedCount: Int = 0
@@ -75,17 +86,28 @@ final class SubscriptionManager {
         }
     }
 
-    func purchase(_ product: Product) async throws {
-        let result = try await product.purchase()
-        switch result {
-        case .success(let verification):
-            guard case .verified(let t) = verification else { return }
-            await t.finish()
-            await refreshEntitlements()
-        case .userCancelled, .pending:
-            break
-        @unknown default:
-            break
+    func purchase(_ product: Product) async -> PurchaseOutcome {
+        do {
+            let result = try await product.purchase()
+            switch result {
+            case .success(let verification):
+                switch verification {
+                case .verified(let t):
+                    await t.finish()
+                    await refreshEntitlements()
+                    return .purchased
+                case .unverified:
+                    return .unverified
+                }
+            case .userCancelled:
+                return .userCancelled
+            case .pending:
+                return .pending
+            @unknown default:
+                return .userCancelled
+            }
+        } catch {
+            return .failed((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
         }
     }
 

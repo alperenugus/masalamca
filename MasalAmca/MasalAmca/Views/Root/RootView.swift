@@ -40,6 +40,7 @@ struct RootView: View {
         }
         .onChange(of: profileManager.activeProfileID) { _, _ in
             mirrorPlaybackPreferencesForActiveChild()
+            Task { await resyncBedtimeNotifications() }
         }
     }
 
@@ -48,6 +49,12 @@ struct RootView: View {
         subscription.hydrateStoryCountFromCloud(sync.storiesGeneratedCount)
         applyCloudActiveProfileIfNeeded(sync)
         mirrorPlaybackPreferencesForActiveChild()
+        Task { await resyncBedtimeNotifications() }
+    }
+
+    private func resyncBedtimeNotifications() async {
+        let active = profileManager.activeProfile(from: childProfiles)
+        await BedtimeNotificationService.syncBedtimeReminders(activeProfile: active)
     }
 
     private func applyCloudActiveProfileIfNeeded(_ sync: AppSyncState) {

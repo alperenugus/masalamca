@@ -9,17 +9,20 @@ struct GradientButton: View {
     @Environment(\.masalThemeManager) private var theme
     let title: String
     let subtitle: String?
+    var disabled: Bool = false
     let action: () -> Void
 
-    init(_ title: String, subtitle: String? = nil, action: @escaping () -> Void) {
+    init(_ title: String, subtitle: String? = nil, disabled: Bool = false, action: @escaping () -> Void) {
         self.title = title
         self.subtitle = subtitle
+        self.disabled = disabled
         self.action = action
     }
 
     var body: some View {
         let c = theme.colors
         Button(action: {
+            guard !disabled else { return }
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             action()
         }) {
@@ -46,5 +49,7 @@ struct GradientButton: View {
             .shadow(color: c.ctaShadow, radius: 16, x: 0, y: 8)
         }
         .buttonStyle(.plain)
+        .disabled(disabled)
+        .opacity(disabled ? 0.5 : 1)
     }
 }
