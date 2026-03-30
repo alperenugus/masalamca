@@ -21,6 +21,14 @@ final class MixerPinStore {
         pinnedRawValues.compactMap { MixerSound(rawValue: $0) }
     }
 
+    /// Sabitlenenler üstte (sabitleme sırası korunur), kalanlar tanımlı enum sırasıyla.
+    func orderedSounds() -> [MixerSound] {
+        let pinned = pinnedSounds
+        let pinnedSet = Set(pinned)
+        let rest = MixerSound.allCases.filter { !pinnedSet.contains($0) }
+        return pinned + rest
+    }
+
     func isPinned(_ sound: MixerSound) -> Bool {
         pinnedRawValues.contains(sound.rawValue)
     }

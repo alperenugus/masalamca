@@ -198,8 +198,8 @@ struct LibraryView: View {
     }
 
     private func playlistForProfile(active: ChildProfile?) -> [Story] {
-        stories.filter { $0.profile?.id == active?.id }
-            .sorted { $0.createdAt > $1.createdAt }
+        let mine = stories.filter { $0.profile?.id == active?.id }
+        return Story.sortedForPlaylist(mine)
     }
 
     private func toggleFavorite(_ s: Story) {
@@ -349,7 +349,7 @@ struct LibraryView: View {
         case .favorites: list = list.filter(\.isFavorite)
         case .genre(let g): list = list.filter { $0.genre == g }
         }
-        return list
+        return Story.sortedForPlaylist(list)
     }
 }
 

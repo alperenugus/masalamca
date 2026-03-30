@@ -18,17 +18,30 @@ struct RootView: View {
     @Bindable var subscription: SubscriptionManager
     @Bindable var mixer: MixerEngine
     @Bindable var pinStore: MixerPinStore
+    @Bindable var toastCenter: ToastCenter
+    var volumeMonitor: VolumeMonitor
 
     var body: some View {
-        Group {
-            if onboardingComplete {
-                MainTabView(subscription: subscription, mixer: mixer, pinStore: pinStore)
-            } else {
-                OnboardingView(subscription: subscription, isComplete: $onboardingComplete)
+        ZStack(alignment: .top) {
+            Group {
+                if onboardingComplete {
+                    MainTabView(subscription: subscription, mixer: mixer, pinStore: pinStore)
+                } else {
+                    OnboardingView(subscription: subscription, isComplete: $onboardingComplete)
+                }
+            }
+            if let msg = toastCenter.message {
+                MasalToastBanner(text: msg)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(2)
             }
         }
+        .animation(.spring(response: 0.35, dampingFraction: 0.88), value: toastCenter.message)
         .preferredColorScheme(.dark)
         .tint(theme.colors.primary)
+        .environment(\.masalToastCenter, toastCenter)
+        .environment(\.masalVolumeMonitor, volumeMonitor)
+        .environment(\.masalMixerPinStore, pinStore)
         .task {
             hydrateFromSwiftData()
         }

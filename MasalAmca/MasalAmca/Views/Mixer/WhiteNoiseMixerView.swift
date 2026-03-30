@@ -7,8 +7,15 @@ import SwiftUI
 
 struct WhiteNoiseMixerView: View {
     @Environment(\.masalThemeManager) private var theme
+    @Environment(\.masalMixerPinStore) private var pinStoreEnv
+    @Environment(\.masalToastCenter) private var toastCenter
+    @Environment(\.masalVolumeMonitor) private var volumeMonitor
     @Bindable var mixer: MixerEngine
     @Bindable var subscription: SubscriptionManager
+
+    private var soundsOrdered: [MixerSound] {
+        pinStoreEnv?.orderedSounds() ?? MixerSound.allCases
+    }
 
     /// Collapse the panel (e.g. drag down or tap chevron).
     var onCollapse: (() -> Void)? = nil
@@ -46,7 +53,7 @@ struct WhiteNoiseMixerView: View {
                 .padding(.bottom, DesignTokens.Spacing.lg)
 
             VStack(spacing: DesignTokens.Spacing.lg) {
-                ForEach(MixerSound.allCases) { sound in
+                ForEach(soundsOrdered) { sound in
                     let locked = !subscription.canUseSound(sound)
                     WhiteNoiseRow(
                         title: sound.displayTitle + (locked ? " · Premium" : ""),
@@ -60,6 +67,9 @@ struct WhiteNoiseMixerView: View {
                             set: { new in
                                 if new, locked {
                                     return
+                                }
+                                if new, let toast = toastCenter, let vol = volumeMonitor {
+                                    vol.warnIfSilent(toast: toast)
                                 }
                                 mixer.setEnabled(sound, on: new)
                             }

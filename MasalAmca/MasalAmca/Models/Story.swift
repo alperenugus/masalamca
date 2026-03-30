@@ -52,4 +52,14 @@ final class Story {
         get { StoryGenre(rawValue: genreRaw) ?? .calming }
         set { genreRaw = newValue.rawValue }
     }
+
+    /// Favoriler üstte, ardından en yeni masallar.
+    static func sortedForPlaylist(_ stories: [Story]) -> [Story] {
+        stories.sorted { a, b in
+            if a.isFavorite != b.isFavorite {
+                return a.isFavorite && !b.isFavorite
+            }
+            return a.createdAt > b.createdAt
+        }
+    }
 }

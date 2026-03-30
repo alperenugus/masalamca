@@ -3,12 +3,15 @@
 //  MasalAmca
 //
 //  Layout: DesignProposal/white_noise_player + StoryPlayerView playlist satırları
+//  Solo playback + pinned order + volume hint (multi-layer UI lives on feature branch).
 //
 
 import SwiftUI
 
 struct WhiteNoisePlayerView: View {
     @Environment(\.masalThemeManager) private var theme
+    @Environment(\.masalToastCenter) private var toastCenter
+    @Environment(\.masalVolumeMonitor) private var volumeMonitor
     @Bindable var subscription: SubscriptionManager
     @Bindable var mixer: MixerEngine
     @Bindable var pinStore: MixerPinStore
@@ -16,7 +19,9 @@ struct WhiteNoisePlayerView: View {
     @State private var focusedSound: MixerSound = .rain
     @State private var showPaywall = false
 
-    private var playlist: [MixerSound] { MixerSound.allCases }
+    private var orderedPlaylist: [MixerSound] {
+        pinStore.orderedSounds()
+    }
 
     private var focusedPlaying: Bool {
         mixer.enabled[focusedSound] == true
@@ -197,7 +202,7 @@ struct WhiteNoisePlayerView: View {
             .padding(.top, DesignTokens.Spacing.md)
 
             VStack(spacing: DesignTokens.Spacing.sm) {
-                ForEach(playlist) { sound in
+                ForEach(orderedPlaylist) { sound in
                     noisePlaylistRow(sound: sound)
                 }
             }
@@ -283,8 +288,13 @@ struct WhiteNoisePlayerView: View {
         }
     }
 
+    private func hintVolumeIfSilent() {
+        guard let toast = toastCenter, let vol = volumeMonitor else { return }
+        vol.warnIfSilent(toast: toast)
+    }
+
     private func syncFocusedFromMixerIfNeeded() {
-        for s in MixerSound.allCases where mixer.enabled[s] == true {
+        for s in orderedPlaylist where mixer.enabled[s] == true {
             focusedSound = s
             return
         }
@@ -303,6 +313,7 @@ struct WhiteNoisePlayerView: View {
         let wasPlaying = focusedPlaying
         focusedSound = sound
         if wasPlaying {
+            hintVolumeIfSilent()
             mixer.solo(sound)
         }
     }
@@ -315,15 +326,16 @@ struct WhiteNoisePlayerView: View {
         if focusedPlaying {
             mixer.setEnabled(focusedSound, on: false)
         } else {
+            hintVolumeIfSilent()
             mixer.solo(focusedSound)
         }
     }
 
     private func stepFocus(delta: Int) {
-        guard let idx = playlist.firstIndex(of: focusedSound) else { return }
-        let n = playlist.count
+        guard let idx = orderedPlaylist.firstIndex(of: focusedSound) else { return }
+        let n = orderedPlaylist.count
         let nextIndex = (idx + delta + n) % n
-        let next = playlist[nextIndex]
+        let next = orderedPlaylist[nextIndex]
         guard subscription.canUseSound(next) else {
             showPaywall = true
             return
@@ -331,6 +343,7 @@ struct WhiteNoisePlayerView: View {
         let wasPlaying = focusedPlaying
         focusedSound = next
         if wasPlaying {
+            hintVolumeIfSilent()
             mixer.solo(next)
         }
     }

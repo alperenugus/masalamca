@@ -10,6 +10,8 @@ struct HomeView: View {
     @Environment(\.masalThemeManager) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(\.masalChildProfileManager) private var profileManager
+    @Environment(\.masalToastCenter) private var toastCenter
+    @Environment(\.masalVolumeMonitor) private var volumeMonitor
 
     @Bindable var subscription: SubscriptionManager
     @Bindable var mixer: MixerEngine
@@ -276,7 +278,9 @@ struct HomeView: View {
 
     private func recentSection(active: ChildProfile?) -> some View {
         let c = theme.colors
-        let recent = stories.filter { $0.profile?.id == active?.id }.prefix(8)
+        let recent = Array(
+            Story.sortedForPlaylist(stories.filter { $0.profile?.id == active?.id }).prefix(8)
+        )
         return VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             HStack {
                 Text("Son Dinlenenler")
@@ -372,7 +376,11 @@ struct HomeView: View {
                 showPaywall = true
                 return
             }
-            mixer.setEnabled(sound, on: !on)
+            let turningOn = !on
+            if turningOn, let toast = toastCenter, let vol = volumeMonitor {
+                vol.warnIfSilent(toast: toast)
+            }
+            mixer.setEnabled(sound, on: turningOn)
         } label: {
             HStack {
                 HStack(spacing: DesignTokens.Spacing.md) {
@@ -408,6 +416,9 @@ struct HomeView: View {
                         if new, !subscription.canUseSound(sound) {
                             showPaywall = true
                             return
+                        }
+                        if new, let toast = toastCenter, let vol = volumeMonitor {
+                            vol.warnIfSilent(toast: toast)
                         }
                         mixer.setEnabled(sound, on: new)
                     }
@@ -451,8 +462,8 @@ struct HomeView: View {
     }
 
     private func profilePlaylist(active: ChildProfile?) -> [Story] {
-        stories.filter { $0.profile?.id == active?.id }
-            .sorted { $0.createdAt > $1.createdAt }
+        let mine = stories.filter { $0.profile?.id == active?.id }
+        return Story.sortedForPlaylist(mine)
     }
 
     private func presentPlayer(story: Story, active: ChildProfile?) {

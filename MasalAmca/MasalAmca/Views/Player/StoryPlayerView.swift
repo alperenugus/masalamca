@@ -12,6 +12,8 @@ struct StoryPlayerView: View {
     @Environment(\.masalThemeManager) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.masalToastCenter) private var toastCenter
+    @Environment(\.masalVolumeMonitor) private var volumeMonitor
     @Bindable var audio: AudioPlayerService
     @Bindable var mixer: MixerEngine
     @Bindable var subscription: SubscriptionManager
@@ -407,6 +409,7 @@ struct StoryPlayerView: View {
                     mixer.stopAll()
                     appliedBackgroundMusicPreset = false
                 } else {
+                    hintVolumeIfSilentBeforePlayback()
                     audio.play()
                     applyBackgroundMusicIfNeeded()
                 }
@@ -590,6 +593,7 @@ struct StoryPlayerView: View {
             if let blob = activeStory.audioBlob, !blob.isEmpty {
                 try audio.load(data: blob, title: activeStory.title)
                 hasPlayableAudio = true
+                hintVolumeIfSilentBeforePlayback()
                 audio.play()
                 return
             }
@@ -598,10 +602,16 @@ struct StoryPlayerView: View {
             guard FileManager.default.fileExists(atPath: url.path) else { return }
             try audio.load(fileURL: url, title: activeStory.title)
             hasPlayableAudio = true
+            hintVolumeIfSilentBeforePlayback()
             audio.play()
         } catch {
             hasPlayableAudio = false
         }
+    }
+
+    private func hintVolumeIfSilentBeforePlayback() {
+        guard let toast = toastCenter, let vol = volumeMonitor else { return }
+        vol.warnIfSilent(toast: toast)
     }
 
 }
