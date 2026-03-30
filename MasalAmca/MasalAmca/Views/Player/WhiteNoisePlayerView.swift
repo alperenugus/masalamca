@@ -9,6 +9,8 @@ import SwiftUI
 
 struct WhiteNoisePlayerView: View {
     @Environment(\.masalThemeManager) private var theme
+    @Environment(\.masalToastCenter) private var toastCenter
+    @Environment(\.masalVolumeMonitor) private var volumeMonitor
     @Bindable var subscription: SubscriptionManager
     @Bindable var mixer: MixerEngine
     @Bindable var pinStore: MixerPinStore
@@ -16,10 +18,16 @@ struct WhiteNoisePlayerView: View {
     @State private var focusedSound: MixerSound = .rain
     @State private var showPaywall = false
 
-    private var playlist: [MixerSound] { MixerSound.allCases }
+    private var orderedPlaylist: [MixerSound] {
+        pinStore.orderedSounds()
+    }
 
     private var focusedPlaying: Bool {
         mixer.enabled[focusedSound] == true
+    }
+
+    private var enabledLayerCount: Int {
+        MixerSound.allCases.filter { mixer.enabled[$0] == true }.count
     }
 
     var body: some View {
@@ -69,6 +77,9 @@ struct WhiteNoisePlayerView: View {
             Text("Uyku öncesi sakinleştirici sesler")
                 .font(MasalFont.bodyMedium())
                 .foregroundStyle(c.onSurfaceVariant.opacity(0.85))
+            Text("Odak satırındaki oynat düğmesi yalnızca o sesi kontrol eder. Diğer satırlardaki + ile katman ekleyebilirsin.")
+                .font(MasalFont.labelSmall())
+                .foregroundStyle(c.secondary.opacity(0.72))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 8)
@@ -98,11 +109,20 @@ struct WhiteNoisePlayerView: View {
                             .foregroundStyle(c.tertiary)
                     }
                 }
-                Text(focusedPlaying ? "Seslendiriliyor…" : "Duraklatıldı")
+                Text(heroStatusLine)
                     .font(MasalFont.labelMedium())
                     .foregroundStyle(c.secondary.opacity(0.75))
+                    .multilineTextAlignment(.center)
             }
         }
+    }
+
+    private var heroStatusLine: String {
+        let layerNote = enabledLayerCount > 1 ? " · \(enabledLayerCount) ses katmanda" : ""
+        if focusedPlaying {
+            return "Odak: çalıyor\(layerNote)"
+        }
+        return "Odak: duraklatıldı\(layerNote)"
     }
 
     private var loopStrip: some View {
@@ -190,14 +210,14 @@ struct WhiteNoisePlayerView: View {
                     .font(MasalFont.titleMedium())
                     .foregroundStyle(c.onSurface)
                 Spacer()
-                Text("Sabitlenebilir")
+                Text("Sabitle · Katman")
                     .font(MasalFont.labelSmall())
                     .foregroundStyle(c.primary.opacity(0.85))
             }
             .padding(.top, DesignTokens.Spacing.md)
 
             VStack(spacing: DesignTokens.Spacing.sm) {
-                ForEach(playlist) { sound in
+                ForEach(orderedPlaylist) { sound in
                     noisePlaylistRow(sound: sound)
                 }
             }
@@ -210,12 +230,15 @@ struct WhiteNoisePlayerView: View {
         let on = mixer.enabled[sound] == true
         let subtitle: String = {
             if isCurrent {
-                return on ? "Çalıyor • \(sound.playlistSubtitle)" : "Duraklatıldı • \(sound.playlistSubtitle)"
+                return on ? "Odak • çalıyor • \(sound.playlistSubtitle)" : "Odak • duraklatıldı • \(sound.playlistSubtitle)"
+            }
+            if on {
+                return "Katman • çalıyor • \(sound.playlistSubtitle)"
             }
             return sound.playlistSubtitle
         }()
 
-        return HStack(spacing: DesignTokens.Spacing.md) {
+        return HStack(spacing: DesignTokens.Spacing.sm) {
             Button {
                 selectSound(sound)
             } label: {
@@ -259,6 +282,12 @@ struct WhiteNoisePlayerView: View {
             }
             .buttonStyle(.plain)
 
+            if sound != focusedSound {
+                layerToggleButton(sound: sound, on: on, colors: c)
+            } else {
+                Color.clear.frame(width: 44, height: 44)
+            }
+
             Button {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 pinStore.togglePin(sound)
@@ -283,8 +312,42 @@ struct WhiteNoisePlayerView: View {
         }
     }
 
+    @ViewBuilder
+    private func layerToggleButton(sound: MixerSound, on: Bool, colors c: DreamscapePalette) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            if on {
+                mixer.setEnabled(sound, on: false)
+            } else {
+                addLayer(sound)
+            }
+        } label: {
+            Image(systemName: on ? "minus.circle.fill" : "plus.circle.fill")
+                .font(.title3)
+                .foregroundStyle(on ? c.secondary : c.primary)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(on ? "Katmandan çıkar" : "Katman olarak ekle")
+    }
+
+    private func hintVolumeIfSilent() {
+        guard let toast = toastCenter, let vol = volumeMonitor else { return }
+        vol.warnIfSilent(toast: toast)
+    }
+
+    private func addLayer(_ sound: MixerSound) {
+        guard subscription.canUseSound(sound) else {
+            showPaywall = true
+            return
+        }
+        hintVolumeIfSilent()
+        mixer.setEnabled(sound, on: true)
+    }
+
     private func syncFocusedFromMixerIfNeeded() {
-        for s in MixerSound.allCases where mixer.enabled[s] == true {
+        for s in orderedPlaylist where mixer.enabled[s] == true {
             focusedSound = s
             return
         }
@@ -300,11 +363,7 @@ struct WhiteNoisePlayerView: View {
             showPaywall = true
             return
         }
-        let wasPlaying = focusedPlaying
         focusedSound = sound
-        if wasPlaying {
-            mixer.solo(sound)
-        }
     }
 
     private func toggleFocusedPlayback() {
@@ -315,23 +374,20 @@ struct WhiteNoisePlayerView: View {
         if focusedPlaying {
             mixer.setEnabled(focusedSound, on: false)
         } else {
-            mixer.solo(focusedSound)
+            hintVolumeIfSilent()
+            mixer.setEnabled(focusedSound, on: true)
         }
     }
 
     private func stepFocus(delta: Int) {
-        guard let idx = playlist.firstIndex(of: focusedSound) else { return }
-        let n = playlist.count
+        guard let idx = orderedPlaylist.firstIndex(of: focusedSound) else { return }
+        let n = orderedPlaylist.count
         let nextIndex = (idx + delta + n) % n
-        let next = playlist[nextIndex]
+        let next = orderedPlaylist[nextIndex]
         guard subscription.canUseSound(next) else {
             showPaywall = true
             return
         }
-        let wasPlaying = focusedPlaying
         focusedSound = next
-        if wasPlaying {
-            mixer.solo(next)
-        }
     }
 }
