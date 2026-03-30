@@ -51,7 +51,7 @@ struct StorySettingsView: View {
 
     @State private var length: StoryLengthPreference = .medium
     @State private var narrator: NarratorChoice = .yumuşakBulut
-    @State private var bento: StoryBentoTheme = .adventure
+    @State private var bentoSelection: Set<StoryBentoTheme> = [.adventure]
     @State private var autoStop: Bool = true
     @State private var backgroundMusic: Bool = true
     @State private var previewError: String?
@@ -111,7 +111,7 @@ struct StorySettingsView: View {
         }
         .onChange(of: length) { _, _ in schedulePersistSnapshot() }
         .onChange(of: narrator) { _, _ in schedulePersistSnapshot() }
-        .onChange(of: bento) { _, _ in schedulePersistSnapshot() }
+        .onChange(of: bentoSelection) { _, _ in schedulePersistSnapshot() }
         .onChange(of: autoStop) { _, _ in schedulePersistSnapshot() }
         .onChange(of: backgroundMusic) { _, _ in schedulePersistSnapshot() }
         .onDisappear {
@@ -342,26 +342,44 @@ struct StorySettingsView: View {
                 .font(MasalFont.titleMedium())
                 .foregroundStyle(c.secondary)
                 .padding(.horizontal, DesignTokens.Spacing.sm)
+            Text("Birden fazla seçebilirsin; her yeni masalda seçtiklerinden biri rastgele kullanılır.")
+                .font(MasalFont.labelMedium())
+                .foregroundStyle(c.onSurfaceVariant.opacity(0.85))
+                .padding(.horizontal, DesignTokens.Spacing.sm)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignTokens.Spacing.sm) {
                 ForEach(StoryBentoTheme.allCases) { tile in
-                    let on = bento == tile
+                    let on = bentoSelection.contains(tile)
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        bento = tile
-                    } label: {
-                        VStack(spacing: DesignTokens.Spacing.sm) {
-                            Image(systemName: tile.systemImage)
-                                .font(.system(size: 26))
-                                .foregroundStyle(on ? c.tertiary : c.secondary)
-                            Text(tile.displayTitle)
-                                .font(MasalFont.labelMedium())
-                                .fontWeight(.bold)
-                                .multilineTextAlignment(.center)
-                                .foregroundStyle(on ? c.onSurface : c.secondary)
+                        if on {
+                            if bentoSelection.count > 1 {
+                                bentoSelection = bentoSelection.subtracting([tile])
+                            }
+                        } else {
+                            bentoSelection = bentoSelection.union([tile])
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, DesignTokens.Spacing.md)
+                    } label: {
+                        ZStack(alignment: .topTrailing) {
+                            VStack(spacing: DesignTokens.Spacing.sm) {
+                                Image(systemName: tile.systemImage)
+                                    .font(.system(size: 26))
+                                    .foregroundStyle(on ? c.tertiary : c.secondary)
+                                Text(tile.displayTitle)
+                                    .font(MasalFont.labelMedium())
+                                    .fontWeight(.bold)
+                                    .multilineTextAlignment(.center)
+                                    .foregroundStyle(on ? c.onSurface : c.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, DesignTokens.Spacing.md)
+                            if on {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(c.primary)
+                                    .padding(8)
+                            }
+                        }
                         .background(
                             RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
                                 .fill(on ? c.surfaceContainerHigh : c.surfaceContainerLow)
@@ -373,6 +391,8 @@ struct StorySettingsView: View {
                     }
                     .buttonStyle(.plain)
                     .opacity(on ? 1 : 0.72)
+                    .accessibilityLabel(tile.displayTitle)
+                    .accessibilityAddTraits(on ? [.isSelected] : [])
                 }
             }
         }
@@ -440,7 +460,7 @@ struct StorySettingsView: View {
             n = .yumuşakBulut
         }
         narrator = n
-        bento = snap.bento
+        bentoSelection = Set(snap.bentoThemes)
         autoStop = snap.autoStopAfterStory
         backgroundMusic = snap.backgroundMusicInPlayer
     }
@@ -459,7 +479,7 @@ struct StorySettingsView: View {
         let snap = StoryPreferences.Snapshot(
             length: length,
             narrator: narrator,
-            bento: bento,
+            bentoThemes: StoryBentoTheme.normalizedSelection(Array(bentoSelection)),
             autoStopAfterStory: autoStop,
             backgroundMusicInPlayer: backgroundMusic
         )

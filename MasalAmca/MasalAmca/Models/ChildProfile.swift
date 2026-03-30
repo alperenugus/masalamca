@@ -23,7 +23,7 @@ final class ChildProfile {
     var storyLengthRaw: String = ""
     /// `NarratorChoice.rawValue`
     var narratorRaw: String = ""
-    /// `StoryBentoTheme.rawValue`; boşsa `themes` üzerinden çıkarım.
+    /// Virgülle ayrılmış `StoryBentoTheme.rawValue` (çoklu seçim). Boşsa `themes` üzerinden çıkarım.
     var bentoThemeRaw: String = ""
     var preferenceAutoStopAfterStory: Bool = true
     var preferenceBackgroundMusic: Bool = true

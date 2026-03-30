@@ -19,7 +19,7 @@ struct OnboardingView: View {
     @State private var childName = ""
     @State private var ageGroup: AgeGroup = .twoToFour
     @State private var storyLength: StoryLengthPreference = .medium
-    @State private var selectedBento: StoryBentoTheme = .adventure
+    @State private var selectedBentos: Set<StoryBentoTheme> = [.adventure]
 
     var body: some View {
         let c = theme.colors
@@ -121,28 +121,42 @@ struct OnboardingView: View {
                             .font(MasalFont.bodyMedium())
                             .fontWeight(.semibold)
                             .foregroundStyle(c.secondary)
-                        Text("Masal Ayarları ile aynı temalar; masallar bu atmosfere göre şekillenir.")
+                        Text("İstediğin kadarını seç; her masalda seçtiklerinden biri rastgele kullanılır (Masal Ayarları ile aynı).")
                             .font(MasalFont.labelMedium())
                             .foregroundStyle(c.onSurfaceVariant.opacity(0.85))
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignTokens.Spacing.sm) {
                             ForEach(StoryBentoTheme.allCases) { tile in
-                                let on = selectedBento == tile
+                                let on = selectedBentos.contains(tile)
                                 Button {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    selectedBento = tile
-                                } label: {
-                                    VStack(spacing: DesignTokens.Spacing.sm) {
-                                        Image(systemName: tile.systemImage)
-                                            .font(.system(size: 26))
-                                            .foregroundStyle(on ? c.tertiary : c.secondary)
-                                        Text(tile.displayTitle)
-                                            .font(MasalFont.labelMedium())
-                                            .fontWeight(.bold)
-                                            .multilineTextAlignment(.center)
-                                            .foregroundStyle(on ? c.onSurface : c.secondary)
+                                    if on {
+                                        if selectedBentos.count > 1 {
+                                            selectedBentos = selectedBentos.subtracting([tile])
+                                        }
+                                    } else {
+                                        selectedBentos = selectedBentos.union([tile])
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, DesignTokens.Spacing.md)
+                                } label: {
+                                    ZStack(alignment: .topTrailing) {
+                                        VStack(spacing: DesignTokens.Spacing.sm) {
+                                            Image(systemName: tile.systemImage)
+                                                .font(.system(size: 26))
+                                                .foregroundStyle(on ? c.tertiary : c.secondary)
+                                            Text(tile.displayTitle)
+                                                .font(MasalFont.labelMedium())
+                                                .fontWeight(.bold)
+                                                .multilineTextAlignment(.center)
+                                                .foregroundStyle(on ? c.onSurface : c.secondary)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, DesignTokens.Spacing.md)
+                                        if on {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundStyle(c.primary)
+                                                .padding(8)
+                                        }
+                                    }
                                     .background(
                                         RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
                                             .fill(on ? c.surfaceContainerHigh : c.surfaceContainerLow)
@@ -183,14 +197,14 @@ struct OnboardingView: View {
     }
 
     private func saveProfile() {
-        let bento = selectedBento
-        let themes = bento.asProfileThemes()
+        let bentos = StoryBentoTheme.normalizedSelection(Array(selectedBentos))
+        let themes = StoryBentoTheme.mergedProfileThemes(bentos)
         let profile = ChildProfile(
             name: childName.trimmingCharacters(in: .whitespacesAndNewlines),
             ageGroup: ageGroup,
             themes: themes.isEmpty ? [.fairyTale] : themes
         )
-        profile.bentoThemeRaw = bento.rawValue
+        profile.bentoThemeRaw = StoryBentoTheme.serializeForStorage(bentos)
         profile.storyLengthRaw = storyLength.rawValue
         modelContext.insert(profile)
         profileManager.switchTo(profile)

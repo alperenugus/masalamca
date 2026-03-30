@@ -120,6 +120,41 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
         case .magic, .none: .adventure
         }
     }
+
+    /// Virgülle ayrılmış `rawValue` listesi (tek eski kayıt da geçerli).
+    static func parsed(fromCommaSeparated raw: String) -> [StoryBentoTheme] {
+        let parts = raw.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        let themes = parts.compactMap { StoryBentoTheme(rawValue: String($0)) }
+        return Array(Set(themes)).sorted { $0.rawValue < $1.rawValue }
+    }
+
+    static func serializeForStorage(_ themes: [StoryBentoTheme]) -> String {
+        Array(Set(themes)).map(\.rawValue).sorted().joined(separator: ",")
+    }
+
+    /// En az bir tema; boş liste Macera sayılır.
+    static func normalizedSelection(_ themes: [StoryBentoTheme]) -> [StoryBentoTheme] {
+        let u = Array(Set(themes))
+        if u.isEmpty { return [.adventure] }
+        return u.sorted { $0.rawValue < $1.rawValue }
+    }
+
+    static func mergedProfileThemes(_ bentos: [StoryBentoTheme]) -> [StoryTheme] {
+        var seen = Set<StoryTheme>()
+        var result: [StoryTheme] = []
+        for b in bentos {
+            for t in b.asProfileThemes() where seen.insert(t).inserted {
+                result.append(t)
+            }
+        }
+        return result.isEmpty ? [.fairyTale] : result
+    }
+
+    /// Masal üretiminde seçilen temalardan biri (her istekte rastgele).
+    static func randomForGeneration(from selection: [StoryBentoTheme]) -> StoryBentoTheme {
+        let n = normalizedSelection(selection)
+        return n.randomElement() ?? .adventure
+    }
 }
 
 // MARK: - Anlatıcı
@@ -240,7 +275,8 @@ enum StoryPreferences {
     struct Snapshot: Equatable {
         var length: StoryLengthPreference
         var narrator: NarratorChoice
-        var bento: StoryBentoTheme
+        /// Seçilen hikâye temaları (en az biri). Üretimde rasgele biri kullanılır.
+        var bentoThemes: [StoryBentoTheme]
         var autoStopAfterStory: Bool
         var backgroundMusicInPlayer: Bool
     }
@@ -273,14 +309,20 @@ enum StoryPreferences {
             return .yumuşakBulut
         }()
 
-        let bento: StoryBentoTheme = {
-            if !profile.bentoThemeRaw.isEmpty, let t = StoryBentoTheme(rawValue: profile.bentoThemeRaw) {
-                return t
+        let bentoThemes: [StoryBentoTheme] = {
+            if !profile.bentoThemeRaw.isEmpty {
+                let parsed = StoryBentoTheme.parsed(fromCommaSeparated: profile.bentoThemeRaw)
+                if !parsed.isEmpty {
+                    return StoryBentoTheme.normalizedSelection(parsed)
+                }
             }
-            if let s = d.string(forKey: Keys.bentoTheme), let t = StoryBentoTheme(rawValue: s) {
-                return t
+            if let s = d.string(forKey: Keys.bentoTheme), !s.isEmpty {
+                let parsed = StoryBentoTheme.parsed(fromCommaSeparated: s)
+                if !parsed.isEmpty {
+                    return StoryBentoTheme.normalizedSelection(parsed)
+                }
             }
-            return StoryBentoTheme.inferred(from: profile.themes.first)
+            return [StoryBentoTheme.inferred(from: profile.themes.first)]
         }()
 
         let autoStop: Bool = {
@@ -300,7 +342,7 @@ enum StoryPreferences {
         return Snapshot(
             length: length,
             narrator: narrator,
-            bento: bento,
+            bentoThemes: bentoThemes,
             autoStopAfterStory: autoStop,
             backgroundMusicInPlayer: bgMusic
         )
@@ -311,10 +353,11 @@ enum StoryPreferences {
     static func persist(snapshot: Snapshot, to profile: ChildProfile, modelContext: ModelContext) {
         profile.storyLengthRaw = snapshot.length.rawValue
         profile.narratorRaw = snapshot.narrator.rawValue
-        profile.bentoThemeRaw = snapshot.bento.rawValue
+        let bentos = StoryBentoTheme.normalizedSelection(snapshot.bentoThemes)
+        profile.bentoThemeRaw = StoryBentoTheme.serializeForStorage(bentos)
         profile.preferenceAutoStopAfterStory = snapshot.autoStopAfterStory
         profile.preferenceBackgroundMusic = snapshot.backgroundMusicInPlayer
-        profile.themes = snapshot.bento.asProfileThemes()
+        profile.themes = StoryBentoTheme.mergedProfileThemes(bentos)
         profile.updatedAt = .now
         let d = UserDefaults.standard
         d.set(snapshot.autoStopAfterStory, forKey: Keys.autoStopAfterStory)
@@ -337,15 +380,22 @@ enum StoryPreferences {
         let d = UserDefaults.standard
         let length = d.string(forKey: Keys.length).flatMap(StoryLengthPreference.init(rawValue:)) ?? .medium
         let narrator = d.string(forKey: Keys.narrator).flatMap(NarratorChoice.resolvedFromStoredRaw) ?? .yumuşakBulut
-        let bento: StoryBentoTheme
-        if let raw = d.string(forKey: Keys.bentoTheme), let t = StoryBentoTheme(rawValue: raw) {
-            bento = t
+        let bentoThemes: [StoryBentoTheme]
+        if let raw = d.string(forKey: Keys.bentoTheme), !raw.isEmpty {
+            let parsed = StoryBentoTheme.parsed(fromCommaSeparated: raw)
+            bentoThemes = parsed.isEmpty ? [.adventure] : StoryBentoTheme.normalizedSelection(parsed)
         } else {
-            bento = .adventure
+            bentoThemes = [.adventure]
         }
         let autoStop = d.object(forKey: Keys.autoStopAfterStory) as? Bool ?? true
         let bgMusic = d.object(forKey: Keys.backgroundMusicInPlayer) as? Bool ?? true
-        return Snapshot(length: length, narrator: narrator, bento: bento, autoStopAfterStory: autoStop, backgroundMusicInPlayer: bgMusic)
+        return Snapshot(
+            length: length,
+            narrator: narrator,
+            bentoThemes: bentoThemes,
+            autoStopAfterStory: autoStop,
+            backgroundMusicInPlayer: bgMusic
+        )
     }
 
     static func resolvedVoiceID(for profile: ChildProfile?) -> String {
