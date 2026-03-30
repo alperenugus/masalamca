@@ -2,5 +2,15 @@ name = "masal-amca-proxy"
 main = "src/index.ts"
 compatibility_date = "2025-03-01"
 
+# Per-IP burst protection (see src/index.ts). Requires wrangler >= 4.36.
+# Limit is per Cloudflare PoP, per key; each story uses 2 calls (story + tts).
+[[ratelimits]]
+name = "API_RATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 40
+  period = 60
+
 [vars]
 # Set real secrets with: wrangler secret put OPENAI_API_KEY

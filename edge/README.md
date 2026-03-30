@@ -18,11 +18,21 @@ npx wrangler dev
 
 ## Deploy
 
+Requires **Wrangler 4.36+** (`npm install` in this folder).
+
 ```bash
 npx wrangler deploy
 ```
 
 Set the worker URL in the iOS app **Info.plist** keys `ProxyBaseURL` (e.g. `https://masal-amca-proxy.youraccount.workers.dev`) and `ProxyAuthToken` (must match `PROXY_AUTH_TOKEN`).
+
+## Rate limiting (Option A — Workers binding)
+
+`wrangler.toml` defines `[[ratelimits]]` → `env.API_RATE_LIMITER`. Each successful auth check on **`POST /v1/story`** and **`POST /v1/tts`** calls `limit({ key })` once.
+
+- **Key:** `CF-Connecting-IP` (client IP at the edge). One full “generate story” in the app uses **2** units (story + TTS).
+- **Quota:** `40` requests per `60` seconds per IP **per Cloudflare PoP** (edge location), not a single global counter. Tweak `limit` / `period` in `wrangler.toml` if needed (`period` must be `10` or `60`).
+- **Response:** HTTP **429** with JSON `{ "error": "rate_limited", ... }` and `Retry-After: 60`.
 
 ## Endpoints
 

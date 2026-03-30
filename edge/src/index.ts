@@ -1,6 +1,9 @@
 /**
  * Masal Amca — secure proxy for LLM story generation + ElevenLabs TTS.
  * Set secrets: OPENAI_API_KEY, ELEVENLABS_API_KEY, PROXY_AUTH_TOKEN (optional voice id in ELEVENLABS_VOICE_ID)
+ *
+ * Rate limiting: Cloudflare Workers Rate Limit binding (wrangler.toml [[ratelimits]]).
+ * Counters are per edge location (PoP), per key; eventually consistent — good for abuse protection, not billing.
  */
 
 import { buildVariationBlock, sampleStorySeeds } from "./storySeeds";
@@ -10,7 +13,8 @@ export interface Env {
   ELEVENLABS_API_KEY: string;
   ELEVENLABS_VOICE_ID?: string;
   PROXY_AUTH_TOKEN?: string;
-  RATE_LIMIT?: KVNamespace;
+  /** Bound in wrangler.toml; each POST /v1/story and /v1/tts consumes one unit. */
+  API_RATE_LIMITER: RateLimit;
 }
 
 interface StoryRequest {
@@ -77,6 +81,38 @@ function authOk(request: Request, env: Env): boolean {
   return h === `Bearer ${token}`;
 }
 
+/** Client IP for rate limiting (set by Cloudflare). Falls back if missing (e.g. some local tests). */
+function rateLimitClientKey(request: Request): string {
+  return (
+    request.headers.get("CF-Connecting-IP") ??
+    request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ??
+    "unknown"
+  );
+}
+
+async function enforceRateLimit(
+  env: Env,
+  request: Request
+): Promise<Response | null> {
+  const { success } = await env.API_RATE_LIMITER.limit({
+    key: rateLimitClientKey(request),
+  });
+  if (success) return null;
+  return new Response(
+    JSON.stringify({
+      error: "rate_limited",
+      message: "Çok fazla istek. Bir dakika sonra tekrar dene.",
+    }),
+    {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": "60",
+      },
+    }
+  );
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -85,9 +121,13 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname.endsWith("/v1/story")) {
+      const limited = await enforceRateLimit(env, request);
+      if (limited) return limited;
       return handleStory(request, env);
     }
     if (request.method === "POST" && url.pathname.endsWith("/v1/tts")) {
+      const limited = await enforceRateLimit(env, request);
+      if (limited) return limited;
       return handleTTS(request, env);
     }
     return new Response("Masal Amca proxy", { status: 200 });
