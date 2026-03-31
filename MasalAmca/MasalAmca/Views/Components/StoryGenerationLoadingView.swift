@@ -145,7 +145,7 @@ struct StoryGenerationLoadingView: View {
 
             loadingBar(c: c, barShift: barShift)
 
-            Text("Bu işlem bir dakika veya daha kısa sürebilir!")
+            Text("Bir iki dakika içerisinde hikayen hazır olacak.")
                 .font(MasalFont.bodyMedium())
                 .foregroundStyle(c.secondary.opacity(0.75))
                 .multilineTextAlignment(.center)

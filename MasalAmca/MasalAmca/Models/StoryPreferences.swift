@@ -270,6 +270,7 @@ enum StoryPreferences {
         static let bentoTheme = "masal.bentoTheme"
         static let autoStopAfterStory = "masal.autoStopAfterStory"
         static let backgroundMusicInPlayer = "masal.backgroundMusicInPlayer"
+        static let backgroundSoundInPlayer = "masal.backgroundSoundInPlayer"
     }
 
     struct Snapshot: Equatable {
@@ -279,6 +280,7 @@ enum StoryPreferences {
         var bentoThemes: [StoryBentoTheme]
         var autoStopAfterStory: Bool
         var backgroundMusicInPlayer: Bool
+        var backgroundSoundInPlayer: MixerSound
     }
 
     /// Masal üretimi ve ayar ekranı: tercihler `ChildProfile` üzerinden (CloudKit).
@@ -339,12 +341,24 @@ enum StoryPreferences {
             return profile.preferenceBackgroundMusic
         }()
 
+        let bgSound: MixerSound = {
+            if let raw = d.string(forKey: Keys.backgroundSoundInPlayer),
+               let s = MixerSound(rawValue: raw) {
+                return s
+            }
+            if let s = MixerSound(rawValue: profile.preferenceBackgroundSoundRaw) {
+                return s
+            }
+            return .rain
+        }()
+
         return Snapshot(
             length: length,
             narrator: narrator,
             bentoThemes: bentoThemes,
             autoStopAfterStory: autoStop,
-            backgroundMusicInPlayer: bgMusic
+            backgroundMusicInPlayer: bgMusic,
+            backgroundSoundInPlayer: bgSound
         )
     }
 
@@ -357,11 +371,13 @@ enum StoryPreferences {
         profile.bentoThemeRaw = StoryBentoTheme.serializeForStorage(bentos)
         profile.preferenceAutoStopAfterStory = snapshot.autoStopAfterStory
         profile.preferenceBackgroundMusic = snapshot.backgroundMusicInPlayer
+        profile.preferenceBackgroundSoundRaw = snapshot.backgroundSoundInPlayer.rawValue
         profile.themes = StoryBentoTheme.mergedProfileThemes(bentos)
         profile.updatedAt = .now
         let d = UserDefaults.standard
         d.set(snapshot.autoStopAfterStory, forKey: Keys.autoStopAfterStory)
         d.set(snapshot.backgroundMusicInPlayer, forKey: Keys.backgroundMusicInPlayer)
+        d.set(snapshot.backgroundSoundInPlayer.rawValue, forKey: Keys.backgroundSoundInPlayer)
         d.removeObject(forKey: Keys.length)
         d.removeObject(forKey: Keys.narrator)
         d.removeObject(forKey: Keys.bentoTheme)
@@ -374,6 +390,7 @@ enum StoryPreferences {
         let d = UserDefaults.standard
         d.set(snap.autoStopAfterStory, forKey: Keys.autoStopAfterStory)
         d.set(snap.backgroundMusicInPlayer, forKey: Keys.backgroundMusicInPlayer)
+        d.set(snap.backgroundSoundInPlayer.rawValue, forKey: Keys.backgroundSoundInPlayer)
     }
 
     private static func legacySnapshotFromUserDefaults() -> Snapshot {
@@ -388,13 +405,15 @@ enum StoryPreferences {
             bentoThemes = [.adventure]
         }
         let autoStop = d.object(forKey: Keys.autoStopAfterStory) as? Bool ?? true
-        let bgMusic = d.object(forKey: Keys.backgroundMusicInPlayer) as? Bool ?? true
+        let bgMusic = d.object(forKey: Keys.backgroundMusicInPlayer) as? Bool ?? false
+        let bgSound = d.string(forKey: Keys.backgroundSoundInPlayer).flatMap(MixerSound.init(rawValue:)) ?? .rain
         return Snapshot(
             length: length,
             narrator: narrator,
             bentoThemes: bentoThemes,
             autoStopAfterStory: autoStop,
-            backgroundMusicInPlayer: bgMusic
+            backgroundMusicInPlayer: bgMusic,
+            backgroundSoundInPlayer: bgSound
         )
     }
 
@@ -412,6 +431,11 @@ enum StoryPreferences {
     }
 
     static var backgroundMusicDuringStory: Bool {
-        UserDefaults.standard.object(forKey: Keys.backgroundMusicInPlayer) as? Bool ?? true
+        UserDefaults.standard.object(forKey: Keys.backgroundMusicInPlayer) as? Bool ?? false
+    }
+
+    static var backgroundMusicSoundDuringStory: MixerSound {
+        let raw = UserDefaults.standard.string(forKey: Keys.backgroundSoundInPlayer)
+        return raw.flatMap(MixerSound.init(rawValue:)) ?? .rain
     }
 }

@@ -27,8 +27,8 @@ interface StoryRequest {
   target_length?: string;
 }
 
-/** Lansman: düşük birim maliyet; kalite için `eleven_multilingual_v2`ye dönülebilir. */
-const ELEVEN_TTS_MODEL = "eleven_flash_v2_5";
+/** TTS quality: prefer `eleven_multilingual_v2` for cleaner narration. */
+const ELEVEN_TTS_MODEL = "eleven_multilingual_v2";
 
 interface TTSRequest {
   text: string;
@@ -36,14 +36,113 @@ interface TTSRequest {
   output_format: string;
 }
 
+type LengthTarget = "short" | "medium" | "long";
+
+function wordCount(text: string): number {
+  return text.split(/\s+/).filter(Boolean).length;
+}
+
+function padStoryBodyIfTooShort(args: {
+  body: string;
+  minWords: number;
+  maxWords: number;
+  childName: string;
+  themesText: string;
+}): { body: string; didPad: boolean; finalWords: number } {
+  const sanitize = (s: string) => (s ?? "").trim();
+  let out = sanitize(args.body);
+  let wc = wordCount(out);
+  if (!out || wc >= args.minWords) {
+    return { body: out, didPad: false, finalWords: wc };
+  }
+
+  const blocks = [
+    `\n\nDerken ${args.childName}, ${args.themesText} temasının ona öğrettiği en güzel şeyi hatırladı: Küçük adımlar büyük bir yolu tamamlar. Derin bir nefes aldı, etrafına baktı ve kalbinin sesiyle “Ben yapabilirim,” dedi.`,
+    `\n\nYolun kenarında bir bankta oturup etrafı dinledi. Rüzgâr yaprakları usulca sallıyor, uzaklardan bir kuş ninni gibi ötüyordu. ${args.childName} gözlerini bir an kapattı; her nefeste omuzları biraz daha yumuşadı.`,
+    `\n\nSonra, kendine minik bir plan yaptı: Önce bir adım, sonra bir adım daha… Her adımda “Şimdi buradayım,” diye fısıldadı. Bu söz, içindeki telaşı küçülttü; yerini sakin bir sıcaklığa bıraktı.`,
+    `\n\nKarşısına küçük bir zorluk çıktı, ama ${args.childName} acele etmedi. Zorluğu bir bulut gibi hayal etti; bulutlar gelir ve geçer. O da sakince bekledi, düşündü ve en nazik çözümü buldu.`,
+    `\n\nMasalın sonunda ${args.childName} evine dönerken, günün hediyelerini tek tek saydı: Bir gülümseme, bir öğrenme, bir cesaret, bir huzur… Hepsi cebinde ışık gibi parlıyordu.`,
+    `\n\nYatağına uzandığında, yumuşacık bir battaniye gibi sıcak bir düşünce onu sardı. “Bugün elimden geleni yaptım,” dedi. Ve bu cümle, göz kapaklarına tatlı bir ağırlık verdi.`,
+  ];
+
+  let i = 0;
+  while (wc < args.minWords && i < 20) {
+    out += blocks[i % blocks.length];
+    wc = wordCount(out);
+    i++;
+  }
+
+  // Keep the body from growing unbounded if something goes wrong.
+  if (wc > args.maxWords * 1.25) {
+    const words = out.split(/\s+/).filter(Boolean);
+    out = words.slice(0, Math.floor(args.maxWords * 1.1)).join(" ");
+    wc = wordCount(out);
+  }
+
+  return { body: out, didPad: true, finalWords: wc };
+}
+
+function msSince(start: number): number {
+  return Date.now() - start;
+}
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  label: string
+): Promise<Response> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err) {
+    if ((err as { name?: string } | undefined)?.name === "AbortError") {
+      throw new Error(`${label}_timeout`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function lengthWordRange(target?: string): { min: number; max: number } {
+  // Turkish TTS commonly lands around ~150–180 words/min depending on punctuation and style.
+  // These ranges intentionally overshoot a bit to avoid “everything feels < 3 minutes”.
+  switch (target as LengthTarget | undefined) {
+    case "short":
+      // ~3–4 minutes
+      return { min: 520, max: 750 };
+    case "long":
+      // ~9–12 minutes
+      return { min: 1_450, max: 2_050 };
+    default:
+      // Default to short to match iOS behavior when target_length is omitted/invalid.
+      return { min: 520, max: 750 };
+  }
+}
+
+function openAIMaxTokens(target?: string): number {
+  // JSON wrapper + Turkish prose; pick safe ceilings per tier.
+  switch (target as LengthTarget | undefined) {
+    case "short":
+      return 2_000;
+    case "long":
+      return 6_000;
+    default:
+      return 2_000;
+  }
+}
+
 function lengthWordGuidance(target?: string): string {
+  const { min, max } = lengthWordRange(target);
   switch (target) {
     case "short":
-      return "Hedef dinleme süresi yaklaşık 3 dakika (sakin anlatım). Gövde için kabaca 250-350 kelime; kısa ve öz ama tam bir masal.";
+      return `Hedef dinleme süresi yaklaşık 3-4 dakika (sakin anlatım). Gövde için kabaca ${min}-${max} kelime; kısa ve öz ama tam bir masal.`;
     case "long":
-      return "Hedef dinleme süresi yaklaşık 10 dakika. Gövde için kabaca 650-950 kelime; olayı tamamla, sakin tempoda okunabilir paragraflar.";
+      return `Hedef dinleme süresi yaklaşık 9-12 dakika. Gövde için kabaca ${min}-${max} kelime; olayı tamamla, sakin tempoda okunabilir paragraflar.`;
     default:
-      return "Hedef dinleme süresi yaklaşık 5 dakika. Gövde için kabaca 400-650 kelime; baş-orta-son dengeli, uyku öncesi ritim.";
+      return `Hedef dinleme süresi yaklaşık 3-4 dakika (varsayılan). Gövde için kabaca ${min}-${max} kelime; baş-orta-son dengeli, uyku öncesi ritim.`;
   }
 }
 
@@ -116,6 +215,7 @@ async function enforceRateLimit(
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    console.log(`[req] ${request.method} ${url.pathname}`);
     if (!authOk(request, env)) {
       return new Response("Unauthorized", { status: 401 });
     }
@@ -135,6 +235,8 @@ export default {
 };
 
 async function handleStory(request: Request, env: Env): Promise<Response> {
+  const startedAt = Date.now();
+  const reqID = crypto.randomUUID();
   let body: StoryRequest;
   try {
     body = (await request.json()) as StoryRequest;
@@ -151,25 +253,55 @@ async function handleStory(request: Request, env: Env): Promise<Response> {
   const seeds = sampleStorySeeds();
   const user = `${baseUser}\n\n${buildVariationBlock(seeds)}`;
 
-  const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: systemPromptForAge(hint, body.target_length),
+  const range = lengthWordRange(body.target_length);
+  console.log(
+    `[story ${reqID}] target_length=${body.target_length ?? "none"} word_range=${range.min}-${range.max}`
+  );
+
+  async function callOpenAI(extraUser?: string): Promise<Response> {
+    const messages: { role: "system" | "user"; content: string }[] = [
+      {
+        role: "system",
+        content:
+          systemPromptForAge(hint, body.target_length) +
+          `\n\nÇok önemli: JSON içindeki "body" alanı ${range.min}-${range.max} kelime aralığında olmalı. Bu aralığın altına düşme.`,
+      },
+      { role: "user", content: user },
+    ];
+    if (extraUser) messages.push({ role: "user", content: extraUser });
+
+    return fetchWithTimeout(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
         },
-        { role: "user", content: user },
-      ],
-      temperature: 0.7,
-    }),
-  });
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          response_format: { type: "json_object" },
+          messages,
+          temperature: 0.6,
+          max_tokens: openAIMaxTokens(body.target_length),
+        }),
+      },
+      45_000,
+      "openai"
+    );
+  }
+
+  let openaiRes: Response;
+  try {
+    openaiRes = await callOpenAI();
+  } catch (err) {
+    const msg = (err as Error).message ?? "openai_error";
+    console.log(`[story ${reqID}] openai fetch failed: ${msg}`);
+    return new Response(JSON.stringify({ error: msg, request_id: reqID }), {
+      status: 504,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   if (!openaiRes.ok) {
     const t = await openaiRes.text();
@@ -190,12 +322,32 @@ async function handleStory(request: Request, env: Env): Promise<Response> {
     return new Response(JSON.stringify({ error: "parse" }), { status: 502 });
   }
 
+  const padded = padStoryBodyIfTooShort({
+    body: parsed.body ?? "",
+    minWords: range.min,
+    maxWords: range.max,
+    childName: body.child_name,
+    themesText,
+  });
+  parsed.body = padded.body;
+
+  const finalWC = padded.finalWords;
+  console.log(
+    `[story ${reqID}] final word_count=${finalWC} target_length=${body.target_length ?? "none"}`
+  );
+  if (padded.didPad) {
+    console.log(`[story ${reqID}] padded_to_min_words=true`);
+  }
+
   const out = {
     title: parsed.title ?? "Masal",
     body: parsed.body ?? "",
     genre: parsed.genre ?? "calming",
-    word_count: parsed.body?.split(/\s+/).filter(Boolean).length ?? 0,
+    word_count: finalWC,
     model: "gpt-4o-mini",
+    request_id: reqID,
+    target_length: body.target_length ?? null,
+    min_words: range.min,
   };
 
   return new Response(JSON.stringify(out), {
@@ -215,27 +367,68 @@ async function handleTTS(request: Request, env: Env): Promise<Response> {
     body.voice_id && body.voice_id !== "default"
       ? body.voice_id
       : env.ELEVENLABS_VOICE_ID ?? "";
+  const outputFormat = body.output_format?.trim() || "mp3_44100_128";
 
-  const elevenRes = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}`,
-    {
-      method: "POST",
-      headers: {
-        "xi-api-key": env.ELEVENLABS_API_KEY,
-        "Content-Type": "application/json",
-        Accept: "audio/mpeg",
+  let elevenRes: Response;
+  try {
+    elevenRes = await fetchWithTimeout(
+      `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=${encodeURIComponent(outputFormat)}`,
+      {
+        method: "POST",
+        headers: {
+          "xi-api-key": env.ELEVENLABS_API_KEY,
+          "Content-Type": "application/json",
+          Accept: "audio/mpeg",
+        },
+        body: JSON.stringify({
+          text: body.text,
+          model_id: ELEVEN_TTS_MODEL,
+          language_code: "tr",
+        }),
       },
-      body: JSON.stringify({
-        text: body.text,
-        model_id: ELEVEN_TTS_MODEL,
-        language_code: "tr",
-      }),
-    }
-  );
+      45_000,
+      "elevenlabs"
+    );
+  } catch (err) {
+    const msg = (err as Error).message ?? "elevenlabs_error";
+    return new Response(JSON.stringify({ error: msg }), {
+      status: 504,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   if (!elevenRes.ok) {
     const t = await elevenRes.text();
-    return new Response(t, { status: 502 });
+    try {
+      const j = JSON.parse(t) as {
+        detail?: { status?: string; message?: string } | string;
+      };
+      const status =
+        typeof j.detail === "object" && j.detail ? j.detail.status : undefined;
+      const msg =
+        typeof j.detail === "object" && j.detail ? j.detail.message : undefined;
+      if (status === "quota_exceeded") {
+        return new Response(
+          JSON.stringify({
+            error: "quota_exceeded",
+            message:
+              "Seslendirme kotası doldu. Lütfen daha sonra tekrar dene veya uygulamayı günün ilerleyen saatlerinde tekrar dene.",
+            detail: msg ?? null,
+          }),
+          { status: 402, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    } catch {
+      // ignore JSON parse failure
+    }
+    return new Response(
+      JSON.stringify({
+        error: "tts_failed",
+        message: "Seslendirme şu anda yapılamadı. Lütfen tekrar dene.",
+        detail: t.slice(0, 800),
+      }),
+      { status: 502, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   return new Response(elevenRes.body, {

@@ -18,6 +18,7 @@ struct NotificationsInfoSheet: View {
     @State private var reminderOn = false
     @State private var reminderTime = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? .now
     @State private var showSettingsAlert = false
+    @State private var hasUnsavedChanges = false
 
     private var active: ChildProfile? {
         profileManager.activeProfile(from: profiles)
@@ -61,7 +62,7 @@ struct NotificationsInfoSheet: View {
                                             Task { await requestEnableReminder() }
                                         } else {
                                             reminderOn = false
-                                            persistAndSync()
+                                            hasUnsavedChanges = true
                                         }
                                     }
                                 )
@@ -82,7 +83,7 @@ struct NotificationsInfoSheet: View {
                             .disabled(!reminderOn)
                             .onChange(of: reminderTime) { _, _ in
                                 guard reminderOn else { return }
-                                persistAndSync()
+                                hasUnsavedChanges = true
                             }
                         }
                         .padding(DesignTokens.Spacing.lg)
@@ -101,6 +102,14 @@ struct NotificationsInfoSheet: View {
                         dismiss()
                     }
                     .foregroundStyle(c.primary)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Tamam") {
+                        persistAndSync()
+                        dismiss()
+                    }
+                    .foregroundStyle(c.primary)
+                    .disabled(active == nil || !hasUnsavedChanges)
                 }
             }
             .onAppear {
@@ -125,10 +134,12 @@ struct NotificationsInfoSheet: View {
     private func syncUIFromActiveProfile() {
         guard let p = active else {
             reminderOn = false
+            hasUnsavedChanges = false
             return
         }
         reminderOn = p.bedtimeReminderEnabled
         reminderTime = Self.dateFor(hour: p.bedtimeReminderHour, minute: p.bedtimeReminderMinute)
+        hasUnsavedChanges = false
     }
 
     private static func dateFor(hour: Int, minute: Int) -> Date {
@@ -149,7 +160,7 @@ struct NotificationsInfoSheet: View {
         let ok = await BedtimeNotificationService.ensureAuthorizedForBedtime()
         if ok {
             reminderOn = true
-            persistAndSync()
+            hasUnsavedChanges = true
         } else {
             showSettingsAlert = true
         }
@@ -165,5 +176,6 @@ struct NotificationsInfoSheet: View {
         p.updatedAt = .now
         try? modelContext.save()
         Task { await BedtimeNotificationService.syncBedtimeReminders(activeProfile: profileManager.activeProfile(from: profiles)) }
+        hasUnsavedChanges = false
     }
 }

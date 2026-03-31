@@ -5,11 +5,16 @@
 
 import SwiftData
 import SwiftUI
+import AVFoundation
 
 @main
 struct MasalAmcaApp: App {
     init() {
         BedtimeNotificationCenter.shared.install()
+        let session = AVAudioSession.sharedInstance()
+        // Centralized audio session configuration to avoid mid-playback category/mode churn.
+        try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers, .allowAirPlay, .allowBluetoothA2DP])
+        try? session.setActive(true)
     }
 
     @State private var themeManager = ThemeManager()
@@ -22,10 +27,9 @@ struct MasalAmcaApp: App {
 
     private static let modelContainer: ModelContainer = {
         let schema = Schema([ChildProfile.self, Story.self, AppSyncState.self])
-        let cloud = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .automatic)
-        if let container = try? ModelContainer(for: schema, configurations: [cloud]) {
-            return container
-        }
+        // NOTE: CloudKit-backed SwiftData requires a CloudKit-compatible schema (no unique constraints,
+        // all relationships optional, and defaults for non-optional attributes). Our current models
+        // are not compatible yet, so we force local storage to avoid runtime store load failures.
         let local = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .none)
         do {
             return try ModelContainer(for: schema, configurations: [local])

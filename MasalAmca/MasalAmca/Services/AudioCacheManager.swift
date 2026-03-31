@@ -3,6 +3,7 @@
 //  MasalAmca
 //
 
+import AVFoundation
 import Foundation
 
 enum AudioCacheManager {
@@ -18,6 +19,20 @@ enum AudioCacheManager {
         let url = fileURL(forStoryID: storyID, extension: ext)
         try data.write(to: url, options: .atomic)
         return url.lastPathComponent
+    }
+
+    static func fileURL(named fileName: String) -> URL {
+        documentsDirectory().appendingPathComponent(fileName)
+    }
+
+    /// Best-effort duration for cached audio (seconds).
+    static func durationSeconds(forFileNamed fileName: String) -> Int? {
+        let url = fileURL(named: fileName)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        let asset = AVURLAsset(url: url)
+        let seconds = CMTimeGetSeconds(asset.duration)
+        guard seconds.isFinite, seconds > 0 else { return nil }
+        return max(1, Int(seconds.rounded()))
     }
 
     static func removeFile(named fileName: String) throws {

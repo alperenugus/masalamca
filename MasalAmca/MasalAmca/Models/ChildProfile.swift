@@ -26,7 +26,10 @@ final class ChildProfile {
     /// Virgülle ayrılmış `StoryBentoTheme.rawValue` (çoklu seçim). Boşsa `themes` üzerinden çıkarım.
     var bentoThemeRaw: String = ""
     var preferenceAutoStopAfterStory: Bool = true
-    var preferenceBackgroundMusic: Bool = true
+    /// Masal sırasında beyaz gürültü çalsın mı?
+    var preferenceBackgroundMusic: Bool = false
+    /// `MixerSound.rawValue` — masal sırasında seçili beyaz gürültü.
+    var preferenceBackgroundSoundRaw: String = MixerSound.rain.rawValue
 
     /// Yerel bildirim: yatma saati hatırlatıcısı (çocuk profili başına; yalnızca seçili profil için zamanlanır).
     var bedtimeReminderEnabled: Bool = false
@@ -58,7 +61,8 @@ final class ChildProfile {
         self.narratorRaw = NarratorChoice.yumuşakBulut.rawValue
         self.bentoThemeRaw = ""
         self.preferenceAutoStopAfterStory = true
-        self.preferenceBackgroundMusic = true
+        self.preferenceBackgroundMusic = false
+        self.preferenceBackgroundSoundRaw = MixerSound.rain.rawValue
         self.bedtimeReminderEnabled = false
         self.bedtimeReminderHour = 20
         self.bedtimeReminderMinute = 0

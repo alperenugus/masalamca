@@ -14,7 +14,7 @@ struct ChildProfileEditorView: View {
 
     @State private var name = ""
     @State private var ageGroup: AgeGroup = .twoToFour
-    @State private var selectedThemes: Set<StoryTheme> = []
+    @State private var bentoSelection: Set<StoryBentoTheme> = [.adventure]
 
     var body: some View {
         let c = theme.colors
@@ -35,19 +35,56 @@ struct ChildProfileEditorView: View {
                         .pickerStyle(.segmented)
                     }
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Temalar")
+                        Text("Hikaye Teması")
                             .font(MasalFont.bodyMedium())
                             .foregroundStyle(c.secondary)
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 140))], spacing: 8) {
-                            ForEach(StoryTheme.allCases, id: \.self) { t in
-                                GenreChip(
-                                    title: t.displayName,
-                                    systemImageName: t.iconSystemName,
-                                    isSelected: selectedThemes.contains(t)
-                                ) {
-                                    if selectedThemes.contains(t) { selectedThemes.remove(t) }
-                                    else { selectedThemes.insert(t) }
+                        Text("İstediğin kadarını seç; her masalda seçtiklerinden biri rastgele kullanılır (Onboarding ve Masal Ayarları ile aynı).")
+                            .font(MasalFont.labelMedium())
+                            .foregroundStyle(c.onSurfaceVariant.opacity(0.85))
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignTokens.Spacing.sm) {
+                            ForEach(StoryBentoTheme.allCases) { tile in
+                                let on = bentoSelection.contains(tile)
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    if on {
+                                        if bentoSelection.count > 1 {
+                                            bentoSelection = bentoSelection.subtracting([tile])
+                                        }
+                                    } else {
+                                        bentoSelection = bentoSelection.union([tile])
+                                    }
+                                } label: {
+                                    ZStack(alignment: .topTrailing) {
+                                        VStack(spacing: DesignTokens.Spacing.sm) {
+                                            Image(systemName: tile.systemImage)
+                                                .font(.system(size: 26))
+                                                .foregroundStyle(on ? c.tertiary : c.secondary)
+                                            Text(tile.displayTitle)
+                                                .font(MasalFont.labelMedium())
+                                                .fontWeight(.bold)
+                                                .multilineTextAlignment(.center)
+                                                .foregroundStyle(on ? c.onSurface : c.secondary)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, DesignTokens.Spacing.md)
+                                        if on {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundStyle(c.primary)
+                                                .padding(8)
+                                        }
+                                    }
+                                    .background(
+                                        RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                                            .fill(on ? c.surfaceContainerHigh : c.surfaceContainerLow)
+                                    )
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                                            .strokeBorder(on ? c.primary.opacity(0.35) : Color.clear, lineWidth: 1)
+                                    }
                                 }
+                                .buttonStyle(.plain)
+                                .opacity(on ? 1 : 0.72)
                             }
                         }
                     }
@@ -71,12 +108,14 @@ struct ChildProfileEditorView: View {
     }
 
     private func save() {
-        let themes = Array(selectedThemes)
+        let bentos = StoryBentoTheme.normalizedSelection(Array(bentoSelection))
+        let themes = StoryBentoTheme.mergedProfileThemes(bentos)
         let p = ChildProfile(
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             ageGroup: ageGroup,
             themes: themes.isEmpty ? [.fairyTale] : themes
         )
+        p.bentoThemeRaw = StoryBentoTheme.serializeForStorage(bentos)
         modelContext.insert(p)
         profileManager.switchTo(p)
         try? modelContext.save()

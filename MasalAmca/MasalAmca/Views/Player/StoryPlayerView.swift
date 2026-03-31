@@ -104,11 +104,20 @@ struct StoryPlayerView: View {
             appliedBackgroundMusicPreset = false
         }
         .fullScreenCover(isPresented: $showStoryRead) {
-            StoryReadView(story: activeStory, onFinish: { showStoryRead = false })
+            StoryReadView(
+                story: activeStory,
+                isPlaying: audio.isPlaying,
+                onTogglePlayback: {
+                    if audio.isPlaying {
+                        audio.pause()
+                    } else {
+                        hintVolumeIfSilentBeforePlayback()
+                        audio.play()
+                    }
+                },
+                onFinish: { showStoryRead = false }
+            )
                 .masalThemeManager(theme)
-        }
-        .onChange(of: showStoryRead) { _, isReading in
-            if isReading { audio.pause() }
         }
         .onDisappear {
             appliedBackgroundMusicPreset = false
@@ -567,18 +576,33 @@ struct StoryPlayerView: View {
 
     private func wirePlaybackFinishedHandler() {
         audio.onPlaybackFinished = { [mixer] in
-            if StoryPreferences.autoStopAfterStoryEnds {
-                mixer.stopAll()
-            } else {
-                mixer.fadeInAllEnabled(duration: 5)
+            Task { @MainActor in
+                // Continuous play: if a sleep timer is running, respect it and do not advance.
+                if !sleepTimer.isRunning, let next = nextStory(after: activeStory, in: playlist) {
+                    activeStory = next
+                    return
+                }
+
+                if StoryPreferences.autoStopAfterStoryEnds {
+                    mixer.stopAll()
+                } else {
+                    mixer.fadeInAllEnabled(duration: 5)
+                }
             }
         }
+    }
+
+    private func nextStory(after current: Story, in playlist: [Story]) -> Story? {
+        guard let idx = playlist.firstIndex(where: { $0.id == current.id }) else { return nil }
+        let nextIndex = idx + 1
+        guard playlist.indices.contains(nextIndex) else { return nil }
+        return playlist[nextIndex]
     }
 
     @MainActor
     private func applyBackgroundMusicIfNeeded() {
         guard StoryPreferences.backgroundMusicDuringStory, !appliedBackgroundMusicPreset else { return }
-        let sound = MixerSound.rain
+        let sound = StoryPreferences.backgroundMusicSoundDuringStory
         guard subscription.canUseSound(sound) else { return }
         appliedBackgroundMusicPreset = true
         mixer.setLevel(sound, level: 0.22)
@@ -589,6 +613,16 @@ struct StoryPlayerView: View {
     private func loadAudioIfNeeded() async {
         audio.stop()
         hasPlayableAudio = false
+        if !StoryPreferences.backgroundMusicDuringStory {
+            // Avoid unintended overlap (can sound like artifacts/noise) when narration starts.
+            mixer.stopAll()
+        } else {
+            // Keep only the intended subtle bed of sound.
+            let keep = StoryPreferences.backgroundMusicSoundDuringStory
+            for s in MixerSound.allCases where s != keep {
+                mixer.setEnabled(s, on: false)
+            }
+        }
         do {
             if let blob = activeStory.audioBlob, !blob.isEmpty {
                 try audio.load(data: blob, title: activeStory.title)

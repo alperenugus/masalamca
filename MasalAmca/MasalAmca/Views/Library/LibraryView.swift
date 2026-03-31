@@ -22,6 +22,7 @@ struct LibraryView: View {
     @State private var playerPresentation: PresentedStory?
     @State private var storyAudio = AudioPlayerService()
     @State private var readingStory: Story?
+    @State private var pendingStoryDelete: Story?
 
     private var df: DateFormatter {
         let f = DateFormatter()
@@ -96,9 +97,27 @@ struct LibraryView: View {
         }
         .listStyle(.plain)
         .listSectionSpacing(DesignTokens.Spacing.md)
+        .alert(
+            "Masalı sil?",
+            isPresented: Binding(
+                get: { pendingStoryDelete != nil },
+                set: { if !$0 { pendingStoryDelete = nil } }
+            )
+        ) {
+            Button("Sil", role: .destructive) {
+                guard let s = pendingStoryDelete else { return }
+                pendingStoryDelete = nil
+                deleteStory(s)
+            }
+            Button("İptal", role: .cancel) {
+                pendingStoryDelete = nil
+            }
+        } message: {
+            Text("Bu masal ve indirilen sesi silinecek. Bu işlem geri alınamaz.")
+        }
         .scrollContentBackground(.hidden)
         .background(c.surface.ignoresSafeArea())
-        .fullScreenCover(item: $playerPresentation, onDismiss: { storyAudio.stop() }) { wrap in
+        .fullScreenCover(item: $playerPresentation) { wrap in
             StoryPlayerView(
                 audio: storyAudio,
                 mixer: mixer,
@@ -114,7 +133,18 @@ struct LibraryView: View {
         )) {
             Group {
                 if let s = readingStory {
-                    StoryReadView(story: s, onFinish: { readingStory = nil })
+                    StoryReadView(
+                        story: s,
+                        isPlaying: storyAudio.isPlaying,
+                        onTogglePlayback: {
+                            if storyAudio.isPlaying {
+                                storyAudio.pause()
+                            } else {
+                                storyAudio.play()
+                            }
+                        },
+                        onFinish: { readingStory = nil }
+                    )
                         .masalThemeManager(theme)
                 }
             }
@@ -170,7 +200,7 @@ struct LibraryView: View {
         .listRowBackground(Color.clear)
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
-                deleteStory(s)
+                pendingStoryDelete = s
             } label: {
                 Label("Sil", systemImage: "trash.fill")
             }

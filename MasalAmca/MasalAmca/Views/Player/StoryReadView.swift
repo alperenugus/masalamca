@@ -10,6 +10,8 @@ import SwiftUI
 struct StoryReadView: View {
     @Environment(\.masalThemeManager) private var theme
     let story: Story
+    let isPlaying: Bool
+    var onTogglePlayback: () -> Void
     var onFinish: () -> Void
 
     @AppStorage("masal_story_read_font_step") private var fontStepRaw: Int = 0
@@ -73,6 +75,18 @@ struct StoryReadView: View {
                 .lineLimit(1)
 
             Spacer()
+
+            Button {
+                onTogglePlayback()
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(c.primary.opacity(0.85))
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isPlaying ? "Durdur" : "Oynat")
 
             Button {
                 fontStepRaw = (fontStepRaw + 1) % 3

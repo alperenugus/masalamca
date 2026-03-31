@@ -15,30 +15,30 @@ enum MasalFont {
     }
 
     static func displayLarge() -> Font {
-        .custom(headlineFamily, size: 56, relativeTo: .largeTitle).weight(.heavy)
+        .system(size: 56, weight: .heavy, design: .rounded)
     }
 
     static func headlineMedium() -> Font {
-        .custom(headlineFamily, size: 28, relativeTo: .title).weight(.bold)
+        .system(size: 28, weight: .bold, design: .rounded)
     }
 
     static func titleMedium() -> Font {
-        .custom(headlineFamily, size: 18, relativeTo: .title3).weight(.bold)
+        .system(size: 18, weight: .bold, design: .rounded)
     }
 
     static func bodyLarge() -> Font {
-        .custom(bodyFamily, size: 16, relativeTo: .body).weight(.regular)
+        .system(size: 16, weight: .regular, design: .default)
     }
 
     static func bodyMedium() -> Font {
-        .custom(bodyFamily, size: 14, relativeTo: .callout).weight(.medium)
+        .system(size: 14, weight: .medium, design: .default)
     }
 
     static func labelMedium() -> Font {
-        .custom(bodyFamily, size: 12, relativeTo: .caption).weight(.semibold)
+        .system(size: 12, weight: .semibold, design: .default)
     }
 
     static func labelSmall() -> Font {
-        .custom(bodyFamily, size: 10, relativeTo: .caption2).weight(.bold)
+        .system(size: 10, weight: .bold, design: .default)
     }
 }

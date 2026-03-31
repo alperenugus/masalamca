@@ -14,6 +14,7 @@ import UIKit
 @Observable
 @MainActor
 final class AudioPlayerService: NSObject {
+    private static let logPrefix = "[AudioPlayer]"
     private var player: AVAudioPlayer?
     private(set) var isPlaying = false
     private(set) var currentTime: TimeInterval = 0
@@ -21,12 +22,14 @@ final class AudioPlayerService: NSObject {
 
     private var timer: Timer?
     private var remoteCommandsWired = false
+    private var sessionObserversInstalled = false
 
     /// Called when narration reaches natural end (e.g. crossfade into white noise).
     var onPlaybackFinished: (() -> Void)?
 
     override init() {
         super.init()
+        installAudioSessionObserversIfNeeded()
     }
 
     private var nowPlayingTitle: String = "Masal"
@@ -42,6 +45,7 @@ final class AudioPlayerService: NSObject {
         currentTime = 0
         wireRemoteTransportIfNeeded()
         publishFullNowPlayingInfo(title: title)
+        debugLog("load(fileURL): \(title) duration=\(String(format: "%.2f", duration))s url=\(fileURL.lastPathComponent)")
     }
 
     func load(data: Data, title: String = "Masal") throws {
@@ -55,15 +59,16 @@ final class AudioPlayerService: NSObject {
         currentTime = 0
         wireRemoteTransportIfNeeded()
         publishFullNowPlayingInfo(title: title)
+        debugLog("load(data): \(title) duration=\(String(format: "%.2f", duration))s bytes=\(data.count)")
     }
 
     func play() {
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
-        try? AVAudioSession.sharedInstance().setActive(true)
+        let session = AVAudioSession.sharedInstance()
         player?.play()
         isPlaying = true
         startTimer()
         publishFullNowPlayingInfo(title: nowPlayingTitle)
+        debugLog("play(): \(nowPlayingTitle) session(category=\(session.category.rawValue) mode=\(session.mode.rawValue))")
     }
 
     func pause() {
@@ -71,6 +76,7 @@ final class AudioPlayerService: NSObject {
         isPlaying = false
         stopTimer()
         publishFullNowPlayingInfo(title: nowPlayingTitle)
+        debugLog("pause()")
     }
 
     func stop() {
@@ -85,6 +91,7 @@ final class AudioPlayerService: NSObject {
         let center = MPRemoteCommandCenter.shared()
         center.playCommand.removeTarget(nil)
         center.pauseCommand.removeTarget(nil)
+        debugLog("stop()")
     }
 
     func seek(to time: TimeInterval) {
@@ -163,6 +170,34 @@ final class AudioPlayerService: NSObject {
         info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
+
+    private func debugLog(_ msg: String) {
+        #if DEBUG
+        print("\(Self.logPrefix) \(msg)")
+        #endif
+    }
+
+    private func installAudioSessionObserversIfNeeded() {
+        guard !sessionObserversInstalled else { return }
+        sessionObserversInstalled = true
+
+        let nc = NotificationCenter.default
+        nc.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] n in
+            guard let self else { return }
+            let t = n.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+            let type = AVAudioSession.InterruptionType(rawValue: t ?? 0)
+            self.debugLog("AVAudioSession interruption: \(String(describing: type))")
+        }
+        nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { [weak self] n in
+            guard let self else { return }
+            let r = n.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
+            let reason = AVAudioSession.RouteChangeReason(rawValue: r ?? 0)
+            self.debugLog("AVAudioSession route change: \(String(describing: reason))")
+        }
+        nc.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.debugLog("AVAudioSession mediaServicesWereReset")
+        }
     }
 }
 

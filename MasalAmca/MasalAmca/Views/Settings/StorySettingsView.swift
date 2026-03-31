@@ -46,14 +46,16 @@ struct StorySettingsView: View {
     @Environment(\.masalThemeManager) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(\.masalChildProfileManager) private var profileManager
+    @Environment(\.masalToastCenter) private var toastCenter
     @Bindable var subscription: SubscriptionManager
     @Query private var profiles: [ChildProfile]
 
-    @State private var length: StoryLengthPreference = .medium
+    @State private var length: StoryLengthPreference = .short
     @State private var narrator: NarratorChoice = .yumuşakBulut
     @State private var bentoSelection: Set<StoryBentoTheme> = [.adventure]
     @State private var autoStop: Bool = true
-    @State private var backgroundMusic: Bool = true
+    @State private var backgroundMusic: Bool = false
+    @State private var backgroundSound: MixerSound = .rain
     @State private var previewError: String?
     @State private var previewing: NarratorChoice?
     @State private var mp3PreviewPlayer: AVAudioPlayer?
@@ -68,7 +70,6 @@ struct StorySettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xxl) {
                 hero
-                lengthSection
                 narratorSection
                 bentoSection
                 extraSettingsSection
@@ -109,11 +110,11 @@ struct StorySettingsView: View {
                 persistSnapshot()
             }
         }
-        .onChange(of: length) { _, _ in schedulePersistSnapshot() }
         .onChange(of: narrator) { _, _ in schedulePersistSnapshot() }
         .onChange(of: bentoSelection) { _, _ in schedulePersistSnapshot() }
         .onChange(of: autoStop) { _, _ in schedulePersistSnapshot() }
         .onChange(of: backgroundMusic) { _, _ in schedulePersistSnapshot() }
+        .onChange(of: backgroundSound) { _, _ in schedulePersistSnapshot() }
         .onDisappear {
             persistTask?.cancel()
             persistTask = nil
@@ -174,44 +175,6 @@ struct StorySettingsView: View {
             .padding(DesignTokens.Spacing.lg)
         }
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous))
-    }
-
-    private var lengthSection: some View {
-        let c = theme.colors
-        return VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
-            Text("Masal Süresi")
-                .font(MasalFont.titleMedium())
-                .foregroundStyle(c.secondary)
-                .padding(.horizontal, DesignTokens.Spacing.sm)
-
-            HStack(spacing: DesignTokens.Spacing.xs) {
-                ForEach(StoryLengthPreference.allCases, id: \.rawValue) { opt in
-                    let on = length == opt
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        length = opt
-                    } label: {
-                        Text(opt.displayTitle)
-                            .font(MasalFont.labelMedium())
-                            .fontWeight(on ? .bold : .medium)
-                            .foregroundStyle(on ? c.onPrimaryContainer : c.secondary)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(
-                                RoundedRectangle(cornerRadius: DesignTokens.Radius.sm, style: .continuous)
-                                    .fill(on ? AnyShapeStyle(c.primaryContainer) : AnyShapeStyle(c.surfaceContainerHigh.opacity(0.35)))
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(DesignTokens.Spacing.xs)
-            .background(
-                RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
-                    .fill(c.surfaceContainer)
-            )
-        }
     }
 
     private var narratorSection: some View {
@@ -416,10 +379,37 @@ struct StorySettingsView: View {
                 Divider().opacity(0.12)
                 toggleRow(
                     icon: "music.note",
-                    title: "Arkaplan Müziği",
+                    title: "Masal Sırasında Beyaz Gürültü",
                     isOn: $backgroundMusic,
-                    subtitle: "Oynatıcıda hafif yağmur ile başlat"
+                    subtitle: "Masal oynarken seçtiğin sesi düşük seviyede çal"
                 )
+                if backgroundMusic {
+                    Divider().opacity(0.12)
+                    HStack(spacing: DesignTokens.Spacing.md) {
+                        Image(systemName: backgroundSound.systemImage)
+                            .font(.title3)
+                            .foregroundStyle(c.primary)
+                            .frame(width: 28)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Seçili ses")
+                                .font(MasalFont.bodyMedium())
+                                .foregroundStyle(c.onSurface)
+                            Text(backgroundSound.displayTitle)
+                                .font(MasalFont.labelSmall())
+                                .foregroundStyle(c.onSurfaceVariant.opacity(0.75))
+                        }
+                        Spacer()
+                        Picker("Seçili ses", selection: $backgroundSound) {
+                            ForEach(MixerSound.allCases) { s in
+                                Text(s.displayTitle).tag(s)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                    }
+                    .padding(.horizontal, DesignTokens.Spacing.lg)
+                    .padding(.vertical, DesignTokens.Spacing.md)
+                }
             }
             .padding(.vertical, DesignTokens.Spacing.xs)
             .background(
@@ -454,7 +444,7 @@ struct StorySettingsView: View {
     }
 
     private func applySnapshot(_ snap: StoryPreferences.Snapshot) {
-        length = snap.length
+        length = .short
         var n = snap.narrator
         if n.requiresPremium && !subscription.isPremium {
             n = .yumuşakBulut
@@ -463,6 +453,7 @@ struct StorySettingsView: View {
         bentoSelection = Set(snap.bentoThemes)
         autoStop = snap.autoStopAfterStory
         backgroundMusic = snap.backgroundMusicInPlayer
+        backgroundSound = snap.backgroundSoundInPlayer
     }
 
     private func schedulePersistSnapshot() {
@@ -477,11 +468,12 @@ struct StorySettingsView: View {
     private func persistSnapshot() {
         guard let profile = profileManager.activeProfile(from: profiles) else { return }
         let snap = StoryPreferences.Snapshot(
-            length: length,
+            length: .short,
             narrator: narrator,
             bentoThemes: StoryBentoTheme.normalizedSelection(Array(bentoSelection)),
             autoStopAfterStory: autoStop,
-            backgroundMusicInPlayer: backgroundMusic
+            backgroundMusicInPlayer: backgroundMusic,
+            backgroundSoundInPlayer: backgroundSound
         )
         StoryPreferences.persist(snapshot: snap, to: profile, modelContext: modelContext)
     }
@@ -512,7 +504,6 @@ struct StorySettingsView: View {
             return
         }
 
-        previewing = choice
-        localPreview.speakSample()
+        toastCenter?.show("Bu anlatıcı için önizleme sesi henüz hazır değil.")
     }
 }

@@ -26,6 +26,8 @@ struct HomeView: View {
     @State private var playerPresentation: PresentedStory?
     @State private var showPaywall = false
     @State private var showNotificationsSheet = false
+    @State private var pendingStoryDelete: Story?
+    @State private var generationToastArmed = false
     @State private var storyAudio = AudioPlayerService()
     @State private var randomQuickNoisePick: [MixerSound]?
 
@@ -46,13 +48,19 @@ struct HomeView: View {
 
     /// Ücretsiz: ömür boyu 2 üretim sonrası paywall.
     private var freeTrialExhausted: Bool {
-        !subscription.isPremium
+        #if DEBUG
+        if subscription.unlimitedGenerationForLocalTesting { return false }
+        #endif
+        return !subscription.isPremium
             && subscription.storiesGeneratedCount >= SubscriptionManager.freeTierLifetimeGenerationLimit
     }
 
     /// Premium: bugün zaten 2 masal üretildiyse yeni üretim yok (ertesi güne kadar).
     private var premiumDailyQuotaReached: Bool {
-        subscription.isPremium
+        #if DEBUG
+        if subscription.unlimitedGenerationForLocalTesting { return false }
+        #endif
+        return subscription.isPremium
             && storiesCreatedTodayCount >= SubscriptionManager.premiumDailyGenerationLimit
     }
 
@@ -81,8 +89,31 @@ struct HomeView: View {
             }
         }
         .background(c.surface.ignoresSafeArea())
+        .alert(
+            "Masalı sil?",
+            isPresented: Binding(
+                get: { pendingStoryDelete != nil },
+                set: { if !$0 { pendingStoryDelete = nil } }
+            )
+        ) {
+            Button("Sil", role: .destructive) {
+                guard let s = pendingStoryDelete else { return }
+                pendingStoryDelete = nil
+                deleteStory(s)
+            }
+            Button("İptal", role: .cancel) {
+                pendingStoryDelete = nil
+            }
+        } message: {
+            Text("Bu masal ve indirilen sesi silinecek. Bu işlem geri alınamaz.")
+        }
+        .onChange(of: tabSelection) { _, newTab in
+            guard isGenerating, generationToastArmed, newTab != .home else { return }
+            generationToastArmed = false
+            toastCenter?.show("Masal hazırlanıyor… Hazır olunca haber vereceğim.", duration: 5.0)
+        }
         .animation(.easeInOut(duration: 0.35), value: isGenerating)
-        .fullScreenCover(item: $playerPresentation, onDismiss: { storyAudio.stop() }) { wrap in
+        .fullScreenCover(item: $playerPresentation) { wrap in
             StoryPlayerView(
                 audio: storyAudio,
                 mixer: mixer,
@@ -273,7 +304,7 @@ struct HomeView: View {
     private var buttonTitle: String {
         if freeTrialExhausted { return "Premium’u keşfet" }
         if premiumDailyQuotaReached { return "Kitaplığına göz at" }
-        return "Bu gece bir masal üret"
+        return "Masal Üret"
     }
 
     private func recentSection(active: ChildProfile?) -> some View {
@@ -322,7 +353,7 @@ struct HomeView: View {
                                     )
                                 }
                                 Button(role: .destructive) {
-                                    deleteStory(s)
+                                    pendingStoryDelete = s
                                 } label: {
                                     Label("Masalı Sil", systemImage: "trash")
                                 }
@@ -492,8 +523,12 @@ struct HomeView: View {
             return
         }
         guard subscription.canGenerateStory(storiesCreatedTodayFromStore: storiesCreatedTodayCount) else { return }
+        generationToastArmed = true
         isGenerating = true
-        defer { isGenerating = false }
+        defer {
+            isGenerating = false
+            generationToastArmed = false
+        }
 
         do {
             if AppConfiguration.proxyBaseURL == nil {
@@ -511,6 +546,7 @@ struct HomeView: View {
                 subscription.registerStoryGenerated(modelContext: modelContext)
                 try modelContext.save()
                 playerPresentation = PresentedStory(startStory: demo, playlist: profilePlaylist(active: profile))
+                toastCenter?.show("Masal hazır.", duration: 3.5)
                 return
             }
 
@@ -534,11 +570,16 @@ struct HomeView: View {
             let fileName = try AudioCacheManager.save(data: result.audioData, storyID: story.id, extension: "mp3")
             story.audioFileName = fileName
             story.audioBlob = result.audioData
+            if let actual = AudioCacheManager.durationSeconds(forFileNamed: fileName) {
+                story.durationSeconds = actual
+            }
             subscription.registerStoryGenerated(modelContext: modelContext)
             try modelContext.save()
             playerPresentation = PresentedStory(startStory: story, playlist: profilePlaylist(active: profile))
+            toastCenter?.show("Masal hazır.", duration: 3.5)
         } catch {
             generationError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            toastCenter?.show("Masal üretilemedi. Lütfen tekrar dene.", duration: 4.0)
         }
     }
 }

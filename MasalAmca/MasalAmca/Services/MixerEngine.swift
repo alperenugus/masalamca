@@ -64,8 +64,6 @@ final class MixerEngine {
     var enabled: [MixerSound: Bool] = Dictionary(uniqueKeysWithValues: MixerSound.allCases.map { ($0, false) })
 
     init() {
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
-        try? AVAudioSession.sharedInstance().setActive(true)
         for sound in MixerSound.allCases {
             let url =
                 Bundle.main.url(forResource: sound.bundleFileName, withExtension: "wav", subdirectory: "Resources/Audio")

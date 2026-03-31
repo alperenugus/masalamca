@@ -59,7 +59,7 @@ enum PromptOrchestrator {
             themes: chosenBento.apiThemeHints,
             behavioralGoal: profile.behavioralGoals.first,
             language: "tr",
-            targetLength: prefs.length.rawValue
+            targetLength: StoryLengthPreference.short.rawValue
         )
     }
 }

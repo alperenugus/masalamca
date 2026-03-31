@@ -23,13 +23,15 @@ final class SubscriptionManager {
     #if DEBUG
     /// Ayarlar → Geliştirici: yerel test için StoreKit olmadan premium kapıları.
     static let mockPremiumUserDefaultsKey = "masal_debug_mock_premium"
+    /// Ayarlar → Geliştirici: üretim kotasını devre dışı bırakır (yerel test).
+    static let unlimitedGenerationUserDefaultsKey = "masal_debug_unlimited_generation"
     #endif
 
     /// Ücretsiz: uygulama ömrünce en fazla bu kadar üretim; sonra paywall.
     static let freeTierLifetimeGenerationLimit = 2
 
     /// Premium: yerel gün başına en fazla bu kadar yeni masal (SwiftData’daki bugünkü kayıt sayısı ile kontrol).
-    static let premiumDailyGenerationLimit = 2
+    static let premiumDailyGenerationLimit = 3
 
     var products: [Product] = []
     /// `true` yalnızca doğrulanmış ve geçerli abonelik işlemi `Transaction.currentEntitlements` içindeyken.
@@ -119,6 +121,11 @@ final class SubscriptionManager {
     /// Ücretsiz: `storiesGeneratedCount` (CloudKit) ömür boyu kota.
     /// Premium: `storiesCreatedTodayFromStore` bugün (yerel takvim) oluşturulmuş masal sayısı — günlük kota.
     func canGenerateStory(storiesCreatedTodayFromStore: Int = 0) -> Bool {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: Self.unlimitedGenerationUserDefaultsKey) {
+            return true
+        }
+        #endif
         if isPremium {
             return storiesCreatedTodayFromStore < Self.premiumDailyGenerationLimit
         }
@@ -158,6 +165,11 @@ extension SubscriptionManager {
                 Task { await refreshEntitlements() }
             }
         }
+    }
+
+    var unlimitedGenerationForLocalTesting: Bool {
+        get { UserDefaults.standard.bool(forKey: Self.unlimitedGenerationUserDefaultsKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.unlimitedGenerationUserDefaultsKey) }
     }
 }
 #endif
