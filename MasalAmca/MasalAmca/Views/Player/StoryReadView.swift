@@ -179,13 +179,13 @@ struct StoryReadView: View {
             pullQuoteBlock(pullQuoteInner(text), c: c)
         } else if index == 0 && count > 1 {
             Text(text)
-                .font(.custom(MasalFont.headlineFamily, size: 30 * fontScale, relativeTo: .title2).weight(.bold))
+                .font(MasalFont.readerFirstParagraph(size: 30 * fontScale, relativeTo: .title2))
                 .foregroundStyle(c.onSurface)
                 .lineSpacing(8 * fontScale)
                 .fixedSize(horizontal: false, vertical: true)
         } else {
             Text(text)
-                .font(.custom(MasalFont.bodyFamily, size: 20 * fontScale, relativeTo: .title3).weight(.regular))
+                .font(MasalFont.readerBody(size: 20 * fontScale, relativeTo: .title3))
                 .foregroundStyle(c.secondary.opacity(0.92))
                 .lineSpacing(10 * fontScale)
                 .fixedSize(horizontal: false, vertical: true)
@@ -207,7 +207,7 @@ struct StoryReadView: View {
 
     private func pullQuoteBlock(_ inner: String, c: DreamscapePalette) -> some View {
         Text("“\(inner)”")
-            .font(.custom(MasalFont.bodyFamily, size: 18 * fontScale, relativeTo: .body).weight(.medium))
+            .font(MasalFont.readerPullQuote(size: 18 * fontScale, relativeTo: .body))
             .italic()
             .foregroundStyle(c.primary.opacity(0.82))
             .multilineTextAlignment(.center)

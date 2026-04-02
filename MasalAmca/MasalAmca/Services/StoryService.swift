@@ -21,8 +21,20 @@ enum StoryServiceError: Error, LocalizedError {
     case emptyAudio
 
     var errorDescription: String? {
-        // Product decision: show a single friendly message for any API/network issue.
-        "Bir hata oluştu, lütfen daha sonra tekrar dene!"
+        switch self {
+        case .remoteMessage(let msg, _):
+            return msg
+        case .rateLimited:
+            return "Çok fazla istek. Lütfen bir süre sonra tekrar dene."
+        case .timedOut:
+            return "İstek zaman aşımına uğradı. Bağlantını kontrol edip tekrar dene."
+        case .emptyAudio:
+            return "Ses dosyası alınamadı. Lütfen tekrar dene."
+        case .missingProxyURL:
+            return "Sunucu adresi yapılandırılmamış."
+        default:
+            return "Bir hata oluştu, lütfen daha sonra tekrar dene!"
+        }
     }
 }
 
@@ -148,7 +160,9 @@ actor StoryService {
         let ttsURL = base.appendingPathComponent("v1").appendingPathComponent("tts")
         var ttsReq = URLRequest(url: ttsURL)
         ttsReq.httpMethod = "POST"
-        ttsReq.timeoutInterval = 90
+        // Long Turkish stories (many minutes of audio) need far more than 90s end-to-end (proxy + ElevenLabs).
+        let wordEstimate = max(1, text.split(whereSeparator: \.isWhitespace).count)
+        ttsReq.timeoutInterval = min(300, max(120, Double(wordEstimate) * 0.35))
         ttsReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if !authToken.isEmpty {
             ttsReq.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
@@ -168,13 +182,27 @@ actor StoryService {
         }
         guard let ttsHttp = ttsResp as? HTTPURLResponse else { throw StoryServiceError.badStatus(-1) }
         guard (200 ... 299).contains(ttsHttp.statusCode) else {
+            #if DEBUG
+            if let errText = String(data: audioData, encoding: .utf8) {
+                print("[StoryService] TTS failed status=\(ttsHttp.statusCode) body=\(errText.prefix(500))")
+            } else {
+                print("[StoryService] TTS failed status=\(ttsHttp.statusCode) body_len=\(audioData.count)")
+            }
+            #endif
             if ttsHttp.statusCode == 429 {
                 let retry = (ttsHttp.value(forHTTPHeaderField: "Retry-After")).flatMap(Int.init)
                 throw StoryServiceError.rateLimited(retryAfterSeconds: retry)
             }
-            if let proxy = try? JSONDecoder().decode(ProxyErrorDTO.self, from: audioData),
-               let m = proxy.message, !m.isEmpty {
-                throw StoryServiceError.remoteMessage(m, status: ttsHttp.statusCode)
+            if let proxy = try? JSONDecoder().decode(ProxyErrorDTO.self, from: audioData) {
+                if let m = proxy.message, !m.isEmpty {
+                    throw StoryServiceError.remoteMessage(m, status: ttsHttp.statusCode)
+                }
+                if let e = proxy.error, e.contains("timeout") {
+                    throw StoryServiceError.remoteMessage(
+                        "Seslendirme uzun sürdü ve bağlantı kesildi. Tekrar dene; gerekirse masalı biraz daha kısa seç.",
+                        status: ttsHttp.statusCode
+                    )
+                }
             }
             throw StoryServiceError.badStatus(ttsHttp.statusCode)
         }

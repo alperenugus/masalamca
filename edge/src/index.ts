@@ -386,7 +386,8 @@ async function handleTTS(request: Request, env: Env): Promise<Response> {
           language_code: "tr",
         }),
       },
-      45_000,
+      // Full masals (500+ words) routinely exceed 45s to synthesize; short worker timeouts surface as false failures while ElevenLabs still succeeds for smaller tests.
+      180_000,
       "elevenlabs"
     );
   } catch (err) {

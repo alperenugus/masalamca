@@ -286,7 +286,7 @@ struct StoryPlayerView: View {
                     .font(MasalFont.labelSmall())
                     .foregroundStyle(c.onSurfaceVariant)
                 Text(String(format: "%d:%02d", m, s))
-                    .font(.custom(MasalFont.headlineFamily, size: 22, relativeTo: .title3).weight(.semibold))
+                    .font(MasalFont.timerDigits(size: 22, relativeTo: .title3))
                     .monospacedDigit()
                     .foregroundStyle(c.primary)
             }

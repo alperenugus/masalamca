@@ -52,7 +52,7 @@ struct StoryGenerationLoadingView: View {
             Spacer()
             centerpiece(c: c, orbitAngle: 0, coreScale: 1)
             Spacer().frame(height: 48)
-            messagingBlock(c: c, textOffset: 0, barShift: 0.5)
+            messagingBlock(c: c, textOffset: 0)
             Spacer()
             bottomPill(c: c)
                 .padding(.bottom, 48)
@@ -63,15 +63,13 @@ struct StoryGenerationLoadingView: View {
     private func animatedContent(c: DreamscapePalette, t: TimeInterval) -> some View {
         let orbit = (t.truncatingRemainder(dividingBy: 8)) / 8 * 360
         let coreScale = 1 + 0.05 * sin(t * 2 * .pi / 3)
-        // 0...1, seamless horizontal sweep (no “starts at 3/4” feel)
-        let barShift = (t.truncatingRemainder(dividingBy: 2.2)) / 2.2
         let textOffset = -6 * sin(t * 2 * .pi / 4)
 
         VStack(spacing: 0) {
             Spacer()
             centerpiece(c: c, orbitAngle: orbit, coreScale: CGFloat(coreScale))
             Spacer().frame(height: 48)
-            messagingBlock(c: c, textOffset: textOffset, barShift: CGFloat(barShift))
+            messagingBlock(c: c, textOffset: textOffset)
             Spacer()
             bottomPill(c: c)
                 .padding(.bottom, 48)
@@ -136,7 +134,7 @@ struct StoryGenerationLoadingView: View {
     }
 
     @ViewBuilder
-    private func messagingBlock(c: DreamscapePalette, textOffset: CGFloat, barShift: CGFloat) -> some View {
+    private func messagingBlock(c: DreamscapePalette, textOffset: CGFloat) -> some View {
         VStack(spacing: DesignTokens.Spacing.xl) {
             Text("Masal Amca rüyalardan ilham alıyor...")
                 .font(MasalFont.headlineMedium())
@@ -144,47 +142,12 @@ struct StoryGenerationLoadingView: View {
                 .foregroundStyle(c.onPrimaryContainer)
                 .offset(y: textOffset)
 
-            loadingBar(c: c, barShift: barShift)
-
             Text("Bir iki dakika içerisinde hikayen hazır olacak.")
                 .font(MasalFont.bodyMedium())
                 .foregroundStyle(c.secondary.opacity(0.75))
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, DesignTokens.Spacing.xl)
-    }
-
-    /// `barShift` in 0...1 — sweeps the glowing fill for an indeterminate feel.
-    @ViewBuilder
-    private func loadingBar(c: DreamscapePalette, barShift: CGFloat) -> some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(c.surfaceContainerHigh)
-                    .frame(height: 8)
-
-                // Fully horizontal: the gradient “slug” moves from left edge → right edge across the whole bar.
-                let fillW = max(100, w * 0.72)
-                LinearGradient(
-                    colors: [c.tertiary, c.primary, c.primaryContainer],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .frame(width: fillW, height: 8)
-                .clipShape(Capsule())
-                .shadow(color: c.tertiary.opacity(0.35), radius: 8, x: 0, y: 0)
-                .offset(x: (w - fillW) * barShift)
-                .mask(Capsule().frame(height: 8))
-
-                Image(systemName: "star.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(c.tertiary)
-                    .position(x: min(w * 0.72, w - 14), y: 12)
-            }
-            .frame(height: 24)
-        }
-        .frame(height: 24)
     }
 
     private func bottomPill(c: DreamscapePalette) -> some View {
