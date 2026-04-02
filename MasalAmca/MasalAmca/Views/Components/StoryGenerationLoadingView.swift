@@ -63,7 +63,8 @@ struct StoryGenerationLoadingView: View {
     private func animatedContent(c: DreamscapePalette, t: TimeInterval) -> some View {
         let orbit = (t.truncatingRemainder(dividingBy: 8)) / 8 * 360
         let coreScale = 1 + 0.05 * sin(t * 2 * .pi / 3)
-        let barShift = 0.5 + 0.5 * sin(t * 1.15)
+        // 0...1, seamless horizontal sweep (no “starts at 3/4” feel)
+        let barShift = (t.truncatingRemainder(dividingBy: 2.2)) / 2.2
         let textOffset = -6 * sin(t * 2 * .pi / 4)
 
         VStack(spacing: 0) {
@@ -163,21 +164,18 @@ struct StoryGenerationLoadingView: View {
                     .fill(c.surfaceContainerHigh)
                     .frame(height: 8)
 
-                HStack(spacing: 0) {
-                    LinearGradient(
-                        colors: [c.tertiary, c.primary, c.primaryContainer],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(width: max(100, w * 0.72), height: 8)
-                    .clipShape(Capsule())
-                    .shadow(color: c.tertiary.opacity(0.35), radius: 8, x: 0, y: 0)
-                }
-                .offset(x: CGFloat(barShift) * (w * 0.28) - w * 0.08)
-                .mask {
-                    Capsule()
-                        .frame(height: 8)
-                }
+                // Fully horizontal: the gradient “slug” moves from left edge → right edge across the whole bar.
+                let fillW = max(100, w * 0.72)
+                LinearGradient(
+                    colors: [c.tertiary, c.primary, c.primaryContainer],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: fillW, height: 8)
+                .clipShape(Capsule())
+                .shadow(color: c.tertiary.opacity(0.35), radius: 8, x: 0, y: 0)
+                .offset(x: (w - fillW) * barShift)
+                .mask(Capsule().frame(height: 8))
 
                 Image(systemName: "star.fill")
                     .font(.system(size: 12))
