@@ -56,16 +56,29 @@ enum SubscriptionPaywallCopy {
     }
 }
 
+/// Required for App Store Guideline 3.1.2(c): functional Terms (EULA) + Privacy links in the subscription UI.
 enum AppLegalURLs {
-    static var terms: URL? {
-        guard let s = Bundle.main.object(forInfoDictionaryKey: "TermsOfUseURL") as? String,
-              let u = URL(string: s), !s.isEmpty else { return nil }
-        return u
+    /// Apple’s standard EULA — use when you do not provide a custom EULA in App Store Connect.
+    private static let appleStandardEULA =
+        URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
+
+    /// Canonical policy (plain text). Keep in sync with `docs/MasalAmca.txt` in the masalamca repo and `PrivacyPolicies` repo.
+    private static let defaultPrivacyPolicy =
+        URL(string: "https://github.com/alperenugus/PrivacyPolicies/blob/main/MasalAmca.txt")!
+
+    static var terms: URL {
+        if let s = Bundle.main.object(forInfoDictionaryKey: "TermsOfUseURL") as? String,
+           let u = URL(string: s), !s.isEmpty {
+            return u
+        }
+        return appleStandardEULA
     }
 
-    static var privacy: URL? {
-        guard let s = Bundle.main.object(forInfoDictionaryKey: "PrivacyPolicyURL") as? String,
-              let u = URL(string: s), !s.isEmpty else { return nil }
-        return u
+    static var privacy: URL {
+        if let s = Bundle.main.object(forInfoDictionaryKey: "PrivacyPolicyURL") as? String,
+           let u = URL(string: s), !s.isEmpty {
+            return u
+        }
+        return defaultPrivacyPolicy
     }
 }

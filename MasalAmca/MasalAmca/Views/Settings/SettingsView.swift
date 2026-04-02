@@ -52,6 +52,21 @@ struct SettingsView: View {
                 .listRowBackground(c.surfaceContainer)
 
                 Section {
+                    Link(destination: AppLegalURLs.terms) {
+                        Label("Kullanım Şartları (EULA)", systemImage: "doc.text")
+                    }
+                    Link(destination: AppLegalURLs.privacy) {
+                        Label("Gizlilik Politikası", systemImage: "hand.raised.fill")
+                    }
+                } header: {
+                    Text("Yasal")
+                } footer: {
+                    Text("Abonelik ve uygulama kullanımı için geçerlidir.")
+                        .font(MasalFont.labelSmall())
+                }
+                .listRowBackground(c.surfaceContainer)
+
+                Section {
                     ForEach(profiles) { p in
                         HStack {
                             VStack(alignment: .leading) {

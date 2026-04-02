@@ -205,19 +205,19 @@ struct PaywallView: View {
 
             legalFooterBlock
 
-            if let terms = AppLegalURLs.terms, let privacy = AppLegalURLs.privacy {
+            // Guideline 3.1.2(c): tappable Terms (EULA) + Privacy Policy (defaults from AppLegalURLs if plist keys absent).
+            VStack(spacing: 6) {
                 HStack(spacing: DesignTokens.Spacing.md) {
-                    Link("Kullanım koşulları", destination: terms)
+                    Link("Kullanım Şartları (EULA)", destination: AppLegalURLs.terms)
                     Text("·")
-                    Link("Gizlilik", destination: privacy)
+                        .foregroundStyle(c.outline)
+                    Link("Gizlilik Politikası", destination: AppLegalURLs.privacy)
                 }
                 .font(MasalFont.labelSmall())
                 .foregroundStyle(c.primary.opacity(0.9))
-            } else {
-                Text("Kullanım koşulları ve gizlilik politikası için web sitemize göz at.")
-                    .font(MasalFont.labelSmall())
-                    .foregroundStyle(c.outline)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Kullanım şartları ve gizlilik politikası bağlantıları")
         }
     }
 

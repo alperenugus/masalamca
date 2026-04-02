@@ -1,0 +1,46 @@
+MasalAmca için Gizlilik Politikası
+Yürürlük Tarihi: 2 Nisan 2026
+
+Bu Gizlilik Politikası, MasalAmca (“Uygulama”) kapsamında kişisel verilerin nasıl işlendiğini açıklar. MasalAmca, çocuklar için uyku masalları sunar; ebeveyn veya yasal vasinin cihazında, bilinçli kullanım esasına dayanır.
+
+1. Veri sorumlusu ve iletişim
+Uygulamanın geliştiricisi App Store Connect’te “Satıcı” olarak görünen taraftır. Bu politika hakkında sorularınız için: alperenugus@gmail.com
+
+2. İşlenen veriler ve amaçlar
+2.1. Çocuk profili ve tercihler
+Uygulama içinde bir veya birden fazla çocuk profili oluşturabilirsiniz. Bu kapsamda örneğin çocuğa ait ad veya takma ad, yaş grubu, masal temaları, anlatıcı/ses tercihleri ve benzeri ayarlar cihazınızda işlenir ve saklanır.
+
+2.2. Oluşturulan masallar
+Uygulama tarafından üretilen masal metinleri ve bunlara bağlı ses dosyaları cihazınızda saklanır. Apple iCloud / CloudKit özelliklerini kullanıyorsanız, bu tür içerikler ve profil verileri Apple’ın iCloud hizmeti kapsamında cihazlarınız arasında senkronize edilebilir. Bu işleme Apple’ın gizlilik politikası da uygulanır.
+
+2.3. Abonelik ve ödeme
+Premium abonelikler Apple’ın uygulama içi satın alma (In-App Purchase) sistemi üzerinden yönetilir. Ödeme kartı veya fatura ayrıntılarına MasalAmca doğrudan erişmez; bu bilgiler Apple tarafından işlenir.
+
+3. Masal üretimi ve seslendirme (yapay zekâ ve sunucu)
+Masal metninin oluşturulması ve metnin sese dönüştürülmesi (TTS), geliştirici tarafından işletilen güvenli bir sunucu altyapısı üzerinden yapılır. Bu süreçte, masalı kişiselleştirmek ve üretmek için gerekli olan bilgiler (örneğin profil bağlamı ve üretilen veya üretilecek metin) sunucuya iletilir ve buradan metin üretimi ile ses sentezi için üçüncü taraf hizmet sağlayıcılara aktarılabilir.
+
+Bu aktarımın amacı yalnızca size talep ettiğiniz masal hizmetini sunmaktır. MasalAmca, bu verileri üçüncü taraflara reklam veya profilleme amacıyla satmaz.
+
+Metin üretimi ve seslendirme sağlayıcılarının verilerinizi nasıl işlediği kendi gizlilik politikalarına tabidir; hizmetin gerektirdiği ölçüde işleme yapılır.
+
+4. Analitik, reklam ve takip
+MasalAmca, kullanım alışkanlıklarınızı izlemek için kişisel veri toplayan üçüncü taraf reklam veya analitik (analytics) SDK’ları entegre etmez. Kişilerinize, fotoğraflarınıza, mikrofon veya kameranıza erişim istenmez.
+
+5. Çocukların gizliliği
+Uygulama, çocuklara yönelik içerik sunmakla birlikte hesap oluşturmayı veya çocuktan doğrudan kişisel veri talep etmeyi gerektirmez; veriler ebeveynin cihazı ve tercihleri üzerinden yönetilir. Reklam gösterimi veya davranışsal reklam profili oluşturma amacıyla tasarlanmamıştır.
+
+6. Üçüncü taraflarla paylaşım
+Kişisel verileriniz yalnızca (i) hizmetin sunulması için zorunlu olan işlemeler (ör. bölüm 3), (ii) Apple’ın abonelik ve iCloud süreçleri, (iii) yasal zorunluluklar çerçevesinde paylaşılabilir.
+
+7. Güvenlik ve saklama
+Veri aktarımında şifreli iletişim (ör. HTTPS) kullanılır. Cihazınızda ve iCloud’ta saklanan verilerin güvenliği, cihaz ve Apple hesabı güvenliğinize de bağlıdır.
+
+8. Haklarınız
+İlgili mevzuat (ör. KVKK, GDPR) kapsamında erişim, düzeltme, silme, itiraz veya kısıtlama taleplerinde yukarıdaki iletişim adresinden bize yazabilirsiniz.
+
+9. Bu politikadaki değişiklikler
+Bu metni zaman zaman güncelleyebiliriz. Önemli değişikliklerde güncel metin bağlantısı (aşağıdaki konum) üzerinden yayımlanır. Yürürlük tarihi üstte güncellenir.
+
+10. Güncel metin
+Bu Gizlilik Politikasının güncel sürümü şu adreste yer alır:
+https://github.com/alperenugus/PrivacyPolicies/blob/main/MasalAmca.txt

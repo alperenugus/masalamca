@@ -17,5 +17,9 @@
 	<false/>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>TermsOfUseURL</key>
+	<string>https://www.apple.com/legal/internet-services/itunes/dev/stdeula/</string>
+	<key>PrivacyPolicyURL</key>
+	<string>https://github.com/alperenugus/PrivacyPolicies/blob/main/MasalAmca.txt</string>
 </dict>
 </plist>
