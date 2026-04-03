@@ -54,6 +54,39 @@ enum SubscriptionPaywallCopy {
         @unknown default: return "\(v) dönem"
         }
     }
+
+    // MARK: - Guideline 3.1.2(c) explicit subscription facts (title, length, price)
+
+    /// In-App Purchase / subscription display name from App Store Connect (`Product.displayName`).
+    static func subscriptionDisplayTitle(for product: Product) -> String {
+        let n = product.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return n.isEmpty ? "Masal Amca Premium" : n
+    }
+
+    /// Human-readable billing period for the auto-renewing subscription.
+    static func subscriptionBillingPeriodPhrase(for product: Product) -> String {
+        guard let sub = product.subscription else {
+            return "Otomatik yenilenen abonelik"
+        }
+        return formatPeriod(sub.subscriptionPeriod)
+    }
+
+    /// Price shown with billing period (e.g. "₺49,99 / 1 ay").
+    static func subscriptionPricePerBillingPeriod(for product: Product) -> String {
+        guard let sub = product.subscription else {
+            return product.displayPrice
+        }
+        let period = formatPeriod(sub.subscriptionPeriod)
+        return "\(product.displayPrice) / \(period)"
+    }
+
+    /// For yearly plans, optional approximate monthly equivalent (price per unit).
+    static func subscriptionEquivalentMonthlyLine(for product: Product) -> String? {
+        guard let sub = product.subscription, sub.subscriptionPeriod.unit == .year else { return nil }
+        let monthly = product.price / 12
+        let formatted = monthly.formatted(product.priceFormatStyle)
+        return "Yaklaşık \(formatted) / ay karşılığı"
+    }
 }
 
 /// Required for App Store Guideline 3.1.2(c): functional Terms (EULA) + Privacy links in the subscription UI.

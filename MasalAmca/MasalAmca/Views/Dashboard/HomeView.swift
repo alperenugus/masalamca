@@ -24,6 +24,7 @@ struct HomeView: View {
     @State private var isGenerating = false
     @State private var generationError: String?
     @State private var playerPresentation: PresentedStory?
+    @State private var showCommerceParentGate = false
     @State private var showPaywall = false
     @State private var showNotificationsSheet = false
     @State private var pendingStoryDelete: Story?
@@ -130,6 +131,13 @@ struct HomeView: View {
             Button("Anladım", role: .cancel) { generationError = nil }
         } message: {
             Text(generationError ?? "")
+        }
+        .sheet(isPresented: $showCommerceParentGate) {
+            ParentalGateSheet(kind: .commerce) {
+                showPaywall = true
+            }
+            .masalThemeManager(theme)
+            .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(subscription: subscription) {
@@ -255,7 +263,7 @@ struct HomeView: View {
         let canGenerateNew = subscription.canGenerateStory(storiesCreatedTodayFromStore: storiesCreatedTodayCount)
         return Button {
             if freeTrialExhausted {
-                showPaywall = true
+                showCommerceParentGate = true
             } else if premiumDailyQuotaReached {
                 tabSelection = .library
             } else if canGenerateNew {
@@ -404,7 +412,7 @@ struct HomeView: View {
         let on = mixer.enabled[sound] ?? false
         return Button {
             if !subscription.canUseSound(sound) {
-                showPaywall = true
+                showCommerceParentGate = true
                 return
             }
             let turningOn = !on
@@ -445,7 +453,7 @@ struct HomeView: View {
                     get: { mixer.enabled[sound] ?? false },
                     set: { new in
                         if new, !subscription.canUseSound(sound) {
-                            showPaywall = true
+                            showCommerceParentGate = true
                             return
                         }
                         if new, let toast = toastCenter, let vol = volumeMonitor {
@@ -519,7 +527,7 @@ struct HomeView: View {
         guard let profile else { return }
         let prefs = StoryPreferences.load(for: profile)
         guard subscription.canUseNarrator(prefs.narrator) else {
-            showPaywall = true
+            showCommerceParentGate = true
             return
         }
         guard subscription.canGenerateStory(storiesCreatedTodayFromStore: storiesCreatedTodayCount) else { return }

@@ -17,6 +17,7 @@ struct WhiteNoisePlayerView: View {
     @Bindable var pinStore: MixerPinStore
 
     @State private var focusedSound: MixerSound = .rain
+    @State private var showCommerceParentGate = false
     @State private var showPaywall = false
 
     private var orderedPlaylist: [MixerSound] {
@@ -56,6 +57,13 @@ struct WhiteNoisePlayerView: View {
         }
         .onAppear {
             syncFocusedFromMixerIfNeeded()
+        }
+        .sheet(isPresented: $showCommerceParentGate) {
+            ParentalGateSheet(kind: .commerce) {
+                showPaywall = true
+            }
+            .masalThemeManager(theme)
+            .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(subscription: subscription) {
@@ -307,7 +315,7 @@ struct WhiteNoisePlayerView: View {
             return
         }
         guard subscription.canUseSound(sound) else {
-            showPaywall = true
+            showCommerceParentGate = true
             return
         }
         let wasPlaying = focusedPlaying
@@ -320,7 +328,7 @@ struct WhiteNoisePlayerView: View {
 
     private func toggleFocusedPlayback() {
         guard subscription.canUseSound(focusedSound) else {
-            showPaywall = true
+            showCommerceParentGate = true
             return
         }
         if focusedPlaying {
@@ -337,7 +345,7 @@ struct WhiteNoisePlayerView: View {
         let nextIndex = (idx + delta + n) % n
         let next = orderedPlaylist[nextIndex]
         guard subscription.canUseSound(next) else {
-            showPaywall = true
+            showCommerceParentGate = true
             return
         }
         let wasPlaying = focusedPlaying

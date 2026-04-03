@@ -185,6 +185,10 @@ struct PaywallView: View {
                     }
                 }
                 .padding(.horizontal)
+
+                if let p = chosenProduct {
+                    subscriptionFactsBlock(product: p, c: c)
+                }
             }
 
             if isPurchasing {
@@ -208,10 +212,10 @@ struct PaywallView: View {
             // Guideline 3.1.2(c): tappable Terms (EULA) + Privacy Policy (defaults from AppLegalURLs if plist keys absent).
             VStack(spacing: 6) {
                 HStack(spacing: DesignTokens.Spacing.md) {
-                    Link("Kullanım Şartları (EULA)", destination: AppLegalURLs.terms)
+                    ParentalGatedWebLinkText(title: "Kullanım Şartları (EULA)", url: AppLegalURLs.terms)
                     Text("·")
                         .foregroundStyle(c.outline)
-                    Link("Gizlilik Politikası", destination: AppLegalURLs.privacy)
+                    ParentalGatedWebLinkText(title: "Gizlilik Politikası", url: AppLegalURLs.privacy)
                 }
                 .font(MasalFont.labelSmall())
                 .foregroundStyle(c.primary.opacity(0.9))
@@ -337,6 +341,50 @@ struct PaywallView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    /// Guideline 3.1.2(c): explicit subscription title, length, price (and per-unit hint for yearly).
+    @ViewBuilder
+    private func subscriptionFactsBlock(product: Product, c: DreamscapePalette) -> some View {
+        let title = SubscriptionPaywallCopy.subscriptionDisplayTitle(for: product)
+        let period = SubscriptionPaywallCopy.subscriptionBillingPeriodPhrase(for: product)
+        let priceLine = SubscriptionPaywallCopy.subscriptionPricePerBillingPeriod(for: product)
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.sm) {
+            Text("Abonelik bilgileri")
+                .font(MasalFont.labelMedium())
+                .foregroundStyle(c.onSurfaceVariant)
+                .accessibilityAddTraits(.isHeader)
+            subscriptionFactRow(label: "Abonelik adı", value: title, c: c)
+            subscriptionFactRow(
+                label: "Süre",
+                value: "\(period); iptal etmediğin sürece her dönem sonunda otomatik yenilenir",
+                c: c
+            )
+            subscriptionFactRow(label: "Ücret", value: priceLine, c: c)
+            if let monthly = SubscriptionPaywallCopy.subscriptionEquivalentMonthlyLine(for: product) {
+                Text(monthly)
+                    .font(MasalFont.labelSmall())
+                    .foregroundStyle(c.outline)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DesignTokens.Spacing.md)
+        .background(c.surfaceContainerLow.opacity(0.65))
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous))
+        .padding(.horizontal)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func subscriptionFactRow(label: String, value: String, c: DreamscapePalette) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(MasalFont.labelSmall())
+                .foregroundStyle(c.outline)
+            Text(value)
+                .font(MasalFont.bodyMedium())
+                .foregroundStyle(c.onSurface)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 

@@ -14,6 +14,7 @@ struct OnboardingView: View {
     @Bindable var subscription: SubscriptionManager
 
     @Binding var isComplete: Bool
+    @State private var showCommerceParentGate = false
     @State private var showPaywall = false
 
     @State private var childName = ""
@@ -138,7 +139,7 @@ struct OnboardingView: View {
 
                 GradientButton("Devam Et") {
                     saveProfile()
-                    showPaywall = true
+                    showCommerceParentGate = true
                 }
                 .disabled(childName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .opacity(childName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
@@ -147,6 +148,13 @@ struct OnboardingView: View {
             }
         }
         .background(c.surface.ignoresSafeArea())
+        .sheet(isPresented: $showCommerceParentGate) {
+            ParentalGateSheet(kind: .commerce) {
+                showPaywall = true
+            }
+            .masalThemeManager(theme)
+            .presentationDetents([.medium, .large])
+        }
         .sheet(isPresented: $showPaywall) {
             PaywallView(subscription: subscription) {
                 showPaywall = false

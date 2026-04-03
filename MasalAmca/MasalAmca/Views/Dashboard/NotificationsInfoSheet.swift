@@ -5,6 +5,7 @@
 
 import SwiftData
 import SwiftUI
+import UIKit
 import UserNotifications
 
 /// Yerel yatma hatırlatıcısı: **seçili çocuk profili** başına bir günlük saat (Premium gerekmez). Veri sunucuya gönderilmez.
@@ -18,6 +19,7 @@ struct NotificationsInfoSheet: View {
     @State private var reminderOn = false
     @State private var reminderTime = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? .now
     @State private var showSettingsAlert = false
+    @State private var showParentGateBeforeSettingsApp = false
     @State private var hasUnsavedChanges = false
 
     private var active: ChildProfile? {
@@ -118,11 +120,19 @@ struct NotificationsInfoSheet: View {
             .onChange(of: profileManager.activeProfileID) { _, _ in
                 syncUIFromActiveProfile()
             }
-            .alert("Bildirim izni", isPresented: $showSettingsAlert) {
-                Button("Ayarlara git") {
+            .sheet(isPresented: $showParentGateBeforeSettingsApp) {
+                ParentalGateSheet(kind: .externalContent) {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
                     }
+                }
+                .masalThemeManager(theme)
+                .presentationDetents([.medium, .large])
+            }
+            .alert("Bildirim izni", isPresented: $showSettingsAlert) {
+                Button("Ayarlara git") {
+                    showSettingsAlert = false
+                    showParentGateBeforeSettingsApp = true
                 }
                 Button("Tamam", role: .cancel) {}
             } message: {

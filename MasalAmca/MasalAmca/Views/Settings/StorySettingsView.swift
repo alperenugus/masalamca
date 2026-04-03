@@ -62,6 +62,7 @@ struct StorySettingsView: View {
 
     @State private var localPreview = LocalVoicePreview()
     @State private var persistTask: Task<Void, Never>?
+    @State private var showCommerceParentGate = false
     @State private var showPaywall = false
 
     var body: some View {
@@ -130,6 +131,13 @@ struct StorySettingsView: View {
             Button("Tamam", role: .cancel) { previewError = nil }
         } message: {
             Text(previewError ?? "")
+        }
+        .sheet(isPresented: $showCommerceParentGate) {
+            ParentalGateSheet(kind: .commerce) {
+                showPaywall = true
+            }
+            .masalThemeManager(theme)
+            .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(subscription: subscription) {
@@ -208,7 +216,7 @@ struct StorySettingsView: View {
             Button {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 guard subscription.canUseNarrator(choice) else {
-                    showPaywall = true
+                    showCommerceParentGate = true
                     return
                 }
                 narrator = choice

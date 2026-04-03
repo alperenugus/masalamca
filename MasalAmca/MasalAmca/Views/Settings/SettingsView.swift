@@ -6,6 +6,12 @@
 import SwiftData
 import SwiftUI
 
+private enum CommerceParentGateAction: String, Identifiable {
+    case openPaywall
+    case restorePurchases
+    var id: String { rawValue }
+}
+
 struct SettingsView: View {
     @Environment(\.masalThemeManager) private var theme
     @Environment(\.modelContext) private var modelContext
@@ -15,6 +21,7 @@ struct SettingsView: View {
     @Bindable var subscription: SubscriptionManager
 
     @Query private var profiles: [ChildProfile]
+    @State private var commerceParentGate: CommerceParentGateAction? = nil
     @State private var showPaywall = false
     @State private var showEditor = false
     @State private var pendingProfileDeleteOffsets: IndexSet?
@@ -42,9 +49,9 @@ struct SettingsView: View {
                         Text(subscription.isPremium ? "Aktif" : "Ücretsiz")
                             .foregroundStyle(c.secondary)
                     }
-                    Button("Aboneliği Yönet") { showPaywall = true }
+                    Button("Aboneliği Yönet") { commerceParentGate = .openPaywall }
                     Button("Satın Alımları Geri Yükle") {
-                        Task { await subscription.restore() }
+                        commerceParentGate = .restorePurchases
                     }
                 } header: {
                     Text("Abonelik")
@@ -52,12 +59,16 @@ struct SettingsView: View {
                 .listRowBackground(c.surfaceContainer)
 
                 Section {
-                    Link(destination: AppLegalURLs.terms) {
-                        Label("Kullanım Şartları (EULA)", systemImage: "doc.text")
-                    }
-                    Link(destination: AppLegalURLs.privacy) {
-                        Label("Gizlilik Politikası", systemImage: "hand.raised.fill")
-                    }
+                    ParentalGatedLegalListLink(
+                        title: "Kullanım Şartları (EULA)",
+                        systemImage: "doc.text",
+                        url: AppLegalURLs.terms
+                    )
+                    ParentalGatedLegalListLink(
+                        title: "Gizlilik Politikası",
+                        systemImage: "hand.raised.fill",
+                        url: AppLegalURLs.privacy
+                    )
                 } header: {
                     Text("Yasal")
                 } footer: {
@@ -163,6 +174,18 @@ struct SettingsView: View {
             .task {
                 await subscription.loadProducts()
                 await subscription.refreshEntitlements()
+            }
+            .sheet(item: $commerceParentGate) { action in
+                ParentalGateSheet(kind: .commerce) {
+                    switch action {
+                    case .openPaywall:
+                        showPaywall = true
+                    case .restorePurchases:
+                        Task { await subscription.restore() }
+                    }
+                }
+                .masalThemeManager(theme)
+                .presentationDetents([.medium, .large])
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView(subscription: subscription) { showPaywall = false }
