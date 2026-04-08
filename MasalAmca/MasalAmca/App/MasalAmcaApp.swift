@@ -12,14 +12,18 @@ struct MasalAmcaApp: App {
     init() {
         BedtimeNotificationCenter.shared.install()
         let session = AVAudioSession.sharedInstance()
-        // Centralized audio session configuration to avoid mid-playback category/mode churn.
-        try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers, .allowAirPlay, .allowBluetoothA2DP])
+        // Centralized audio session configuration.
+        // Do NOT use .mixWithOthers — that prevents the lock screen Now Playing card from appearing.
+        // Multiple AVAudioPlayers within the same process play concurrently regardless of this option;
+        // .mixWithOthers only controls inter-app mixing (e.g. mixing with Apple Music).
+        try? session.setCategory(.playback, mode: .default, options: [.allowAirPlay, .allowBluetoothA2DP])
         try? session.setActive(true)
     }
 
     @State private var themeManager = ThemeManager()
     @State private var childProfileManager = ChildProfileManager()
     @State private var subscriptionManager = SubscriptionManager()
+    @State private var audioPlayer = AudioPlayerService()
     @State private var mixerEngine = MixerEngine()
     @State private var mixerPinStore = MixerPinStore()
     @State private var toastCenter = ToastCenter()
@@ -42,6 +46,7 @@ struct MasalAmcaApp: App {
         WindowGroup {
             RootView(
                 subscription: subscriptionManager,
+                audioPlayer: audioPlayer,
                 mixer: mixerEngine,
                 pinStore: mixerPinStore,
                 toastCenter: toastCenter,
@@ -52,6 +57,11 @@ struct MasalAmcaApp: App {
             .masalChildProfileManager(childProfileManager)
             .environment(subscriptionManager)
             .environment(mixerEngine)
+            .environment(\.masalAudioPlayer, audioPlayer)
+            .onAppear {
+                mixerEngine.subscriptionManager = subscriptionManager
+                mixerEngine.audioPlayerService = audioPlayer
+            }
         }
     }
 }

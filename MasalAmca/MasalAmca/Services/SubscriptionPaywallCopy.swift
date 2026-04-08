@@ -6,7 +6,7 @@
 import Foundation
 import StoreKit
 
-/// Metinler App Store Connect’teki abonelik ve tanıtım teklifi ile uyumlu olmalı; mümkün olduğunca `Product` üzerinden türetilir.
+/// Metinler App Store Connect'teki abonelik ve tanıtım teklifi ile uyumlu olmalı; mümkün olduğunca `Product` üzerinden türetilir.
 enum SubscriptionPaywallCopy {
     static func primaryButtonTitle(for product: Product?) -> String {
         guard let product, let intro = product.subscription?.introductoryOffer else {
@@ -38,10 +38,24 @@ enum SubscriptionPaywallCopy {
     }
 
     static func legalFooter(for product: Product?) -> String {
-        if let product, product.subscription?.introductoryOffer != nil {
-            return "Tanıtım süresi bitince iptal etmezsen abonelik dönem sonunda yenilenir. Aboneliği istediğin an Ayarlar’dan yönetebilirsin."
+        if let product, let intro = product.subscription?.introductoryOffer, let sub = product.subscription {
+            let trialPeriod = formatPeriod(intro.period)
+            let billingPeriod = formatPeriod(sub.subscriptionPeriod)
+            switch intro.paymentMode {
+            case .freeTrial:
+                return "\(trialPeriod) ücretsiz deneme süresinin ardından aboneliğin otomatik olarak başlar ve \(billingPeriod) dönem başına \(product.displayPrice) ücretlendirilirsin. İstediğin an Ayarlar\u{2019}dan iptal edebilirsin."
+            default:
+                return "Tanıtım süresi bitince iptal etmezsen abonelik dönem sonunda yenilenir. Aboneliği istediğin an Ayarlar\u{2019}dan yönetebilirsin."
+            }
         }
-        return "Abonelik, iptal etmedikçe dönem sonunda yenilenir. Aboneliği istediğin an Ayarlar’dan yönetebilirsin."
+        return "Abonelik, iptal etmedikçe dönem sonunda yenilenir. Aboneliği istediğin an Ayarlar\u{2019}dan yönetebilirsin."
+    }
+
+    static func trialBanner(for product: Product?) -> String? {
+        guard let product, let intro = product.subscription?.introductoryOffer else { return nil }
+        guard intro.paymentMode == .freeTrial else { return nil }
+        let period = formatPeriod(intro.period)
+        return "\(period) boyunca tamamen ücretsiz dene, beğenmezsen iptal et."
     }
 
     private static func formatPeriod(_ period: Product.SubscriptionPeriod) -> String {
@@ -57,13 +71,11 @@ enum SubscriptionPaywallCopy {
 
     // MARK: - Guideline 3.1.2(c) explicit subscription facts (title, length, price)
 
-    /// In-App Purchase / subscription display name from App Store Connect (`Product.displayName`).
     static func subscriptionDisplayTitle(for product: Product) -> String {
         let n = product.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         return n.isEmpty ? "Masal Amca Premium" : n
     }
 
-    /// Human-readable billing period for the auto-renewing subscription.
     static func subscriptionBillingPeriodPhrase(for product: Product) -> String {
         guard let sub = product.subscription else {
             return "Otomatik yenilenen abonelik"
@@ -71,7 +83,6 @@ enum SubscriptionPaywallCopy {
         return formatPeriod(sub.subscriptionPeriod)
     }
 
-    /// Price shown with billing period (e.g. "₺49,99 / 1 ay").
     static func subscriptionPricePerBillingPeriod(for product: Product) -> String {
         guard let sub = product.subscription else {
             return product.displayPrice
@@ -80,7 +91,6 @@ enum SubscriptionPaywallCopy {
         return "\(product.displayPrice) / \(period)"
     }
 
-    /// For yearly plans, optional approximate monthly equivalent (price per unit).
     static func subscriptionEquivalentMonthlyLine(for product: Product) -> String? {
         guard let sub = product.subscription, sub.subscriptionPeriod.unit == .year else { return nil }
         let monthly = product.price / 12
@@ -91,11 +101,9 @@ enum SubscriptionPaywallCopy {
 
 /// Required for App Store Guideline 3.1.2(c): functional Terms (EULA) + Privacy links in the subscription UI.
 enum AppLegalURLs {
-    /// Apple’s standard EULA — use when you do not provide a custom EULA in App Store Connect.
     private static let appleStandardEULA =
         URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
 
-    /// Canonical policy (plain text). Keep in sync with `docs/MasalAmca.txt` in the masalamca repo and `PrivacyPolicies` repo.
     private static let defaultPrivacyPolicy =
         URL(string: "https://github.com/alperenugus/PrivacyPolicies/blob/main/MasalAmca.txt")!
 

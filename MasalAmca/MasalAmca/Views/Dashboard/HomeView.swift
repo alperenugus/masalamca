@@ -3,6 +3,7 @@
 //  MasalAmca
 //
 
+import StoreKit
 import SwiftData
 import SwiftUI
 
@@ -12,24 +13,25 @@ struct HomeView: View {
     @Environment(\.masalChildProfileManager) private var profileManager
     @Environment(\.masalToastCenter) private var toastCenter
     @Environment(\.masalVolumeMonitor) private var volumeMonitor
+    @Environment(\.requestReview) private var requestReview
+    @Environment(\.masalAudioPlayer) private var audioPlayer
 
     @Bindable var subscription: SubscriptionManager
     @Bindable var mixer: MixerEngine
     @Bindable var pinStore: MixerPinStore
     @Binding var tabSelection: MainTab
+    @Binding var playerPresentation: PresentedStory?
 
     @Query(sort: \Story.createdAt, order: .reverse) private var stories: [Story]
     @Query private var profiles: [ChildProfile]
 
     @State private var isGenerating = false
     @State private var generationError: String?
-    @State private var playerPresentation: PresentedStory?
     @State private var showCommerceParentGate = false
     @State private var showPaywall = false
     @State private var showNotificationsSheet = false
     @State private var pendingStoryDelete: Story?
     @State private var generationToastArmed = false
-    @State private var storyAudio = AudioPlayerService()
     @State private var randomQuickNoisePick: [MixerSound]?
 
     private let storyService = StoryService()
@@ -114,16 +116,6 @@ struct HomeView: View {
             toastCenter?.show("Masal hazırlanıyor… Hazır olunca haber vereceğim.", duration: 5.0)
         }
         .animation(.easeInOut(duration: 0.35), value: isGenerating)
-        .fullScreenCover(item: $playerPresentation) { wrap in
-            StoryPlayerView(
-                audio: storyAudio,
-                mixer: mixer,
-                subscription: subscription,
-                startStory: wrap.startStory,
-                playlist: wrap.playlist
-            )
-            .masalThemeManager(theme)
-        }
         .alert("Bir şeyler ters gitti", isPresented: Binding(
             get: { generationError != nil },
             set: { if !$0 { generationError = nil } }
@@ -153,24 +145,39 @@ struct HomeView: View {
         .onAppear {
             ensureQuickNoisePick()
         }
-        .onChange(of: pinStore.pinnedRawValues) { _, _ in
-            if pinStore.pinnedSounds.isEmpty {
-                randomQuickNoisePick = Array(MixerSound.allCases.shuffled().prefix(3))
-            } else {
-                randomQuickNoisePick = nil
+        // Push story player as a native navigation push — identical pattern to Masal Ayarları.
+        .navigationDestination(item: $playerPresentation) { wrap in
+            if let audio = audioPlayer {
+                StoryPlayerView(
+                    audio: audio,
+                    mixer: mixer,
+                    subscription: subscription,
+                    startStory: wrap.startStory,
+                    playlist: wrap.playlist
+                )
+            }
+        }
+        .onChange(of: playerPresentation) { _, new in
+            if new == nil {
+                cleanUpAfterPlayerDismissed()
             }
         }
     }
 
+    private func cleanUpAfterPlayerDismissed() {
+        guard let audio = audioPlayer else { return }
+        // Clear the view-specific callback. Playlist and skip commands
+        // stay on AudioPlayerService so lock screen next/prev keeps working.
+        audio.onPlaybackFinished = nil
+        audio.onTrackChanged = nil
+    }
+
     /// Sabit yokken rastgele üçlü yalnızca ilk kez veya sabitler kaldırılınca yenilenir.
     private func ensureQuickNoisePick() {
-        guard pinStore.pinnedSounds.isEmpty else {
-            randomQuickNoisePick = nil
-            return
-        }
-        if randomQuickNoisePick == nil {
-            randomQuickNoisePick = Array(MixerSound.allCases.shuffled().prefix(3))
-        }
+        guard randomQuickNoisePick == nil else { return }
+        let free = MixerSound.freeTier.shuffled()
+        let pro = MixerSound.allCases.filter { !MixerSound.freeTier.contains($0) }.shuffled()
+        randomQuickNoisePick = [free[0]] + Array(pro.prefix(2))
     }
 
     private var header: some View {
@@ -310,7 +317,7 @@ struct HomeView: View {
     }
 
     private var buttonTitle: String {
-        if freeTrialExhausted { return "Premium’u keşfet" }
+        if freeTrialExhausted { return "Premium'u keşfet" }
         if premiumDailyQuotaReached { return "Kitaplığına göz at" }
         return "Masal Üret"
     }
@@ -374,11 +381,7 @@ struct HomeView: View {
     }
 
     private var quickNoiseSounds: [MixerSound] {
-        let pinned = pinStore.pinnedSounds
-        if !pinned.isEmpty {
-            return Array(pinned.prefix(3))
-        }
-        return randomQuickNoisePick ?? [.rain, .fireplace, .ocean]
+        randomQuickNoisePick ?? [.rain, .fireplace, .shush]
     }
 
     private var quickNoise: some View {
@@ -409,61 +412,42 @@ struct HomeView: View {
     private func quickNoiseRow(sound: MixerSound, title: String, subtitle: String) -> some View {
         let c = theme.colors
         let isPremiumOnly = !MixerSound.freeTier.contains(sound)
-        let on = mixer.enabled[sound] ?? false
         return Button {
             if !subscription.canUseSound(sound) {
                 showCommerceParentGate = true
                 return
             }
-            let turningOn = !on
-            if turningOn, let toast = toastCenter, let vol = volumeMonitor {
+            if let toast = toastCenter, let vol = volumeMonitor {
                 vol.warnIfSilent(toast: toast)
             }
-            mixer.setEnabled(sound, on: turningOn)
+            mixer.solo(sound)
         } label: {
-            HStack {
-                HStack(spacing: DesignTokens.Spacing.md) {
-                    Circle()
-                        .fill(c.primary.opacity(0.12))
-                        .frame(width: 48, height: 48)
-                        .overlay {
-                            Image(systemName: sound.systemImage)
-                                .foregroundStyle(c.primary)
-                        }
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text(title)
-                                .font(MasalFont.bodyMedium())
-                                .fontWeight(.bold)
-                                .foregroundStyle(c.onSurface)
-                            if isPremiumOnly {
-                                Image(systemName: "crown.fill")
-                                    .font(.caption2)
-                                    .foregroundStyle(c.tertiary)
-                                    .accessibilityLabel("Premium ses")
-                            }
-                        }
-                        Text(subtitle)
-                            .font(MasalFont.labelMedium())
-                            .foregroundStyle(c.onSurfaceVariant.opacity(0.65))
+            HStack(spacing: DesignTokens.Spacing.md) {
+                Circle()
+                    .fill(c.primary.opacity(0.12))
+                    .frame(width: 48, height: 48)
+                    .overlay {
+                        Image(systemName: sound.systemImage)
+                            .foregroundStyle(c.primary)
                     }
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(title)
+                            .font(MasalFont.bodyMedium())
+                            .fontWeight(.bold)
+                            .foregroundStyle(c.onSurface)
+                        if isPremiumOnly {
+                            Image(systemName: "crown.fill")
+                                .font(.caption2)
+                                .foregroundStyle(c.tertiary)
+                                .accessibilityLabel("Premium ses")
+                        }
+                    }
+                    Text(subtitle)
+                        .font(MasalFont.labelMedium())
+                        .foregroundStyle(c.onSurfaceVariant.opacity(0.65))
                 }
                 Spacer()
-                Toggle("", isOn: Binding(
-                    get: { mixer.enabled[sound] ?? false },
-                    set: { new in
-                        if new, !subscription.canUseSound(sound) {
-                            showCommerceParentGate = true
-                            return
-                        }
-                        if new, let toast = toastCenter, let vol = volumeMonitor {
-                            vol.warnIfSilent(toast: toast)
-                        }
-                        mixer.setEnabled(sound, on: new)
-                    }
-                ))
-                .labelsHidden()
-                .tint(c.primary)
             }
             .padding(DesignTokens.Spacing.md)
             .background(c.surfaceContainer)
@@ -553,8 +537,14 @@ struct HomeView: View {
                 modelContext.insert(demo)
                 subscription.registerStoryGenerated(modelContext: modelContext)
                 try modelContext.save()
+                mixer.stopAll()
                 playerPresentation = PresentedStory(startStory: demo, playlist: profilePlaylist(active: profile))
                 toastCenter?.show("Masal hazır.", duration: 3.5)
+                let count = subscription.storiesGeneratedCount
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(2))
+                    AppStoreReviewManager.requestReviewIfAppropriate(storiesGenerated: count, requestReview: requestReview)
+                }
                 return
             }
 
@@ -583,8 +573,14 @@ struct HomeView: View {
             }
             subscription.registerStoryGenerated(modelContext: modelContext)
             try modelContext.save()
+            mixer.stopAll()
             playerPresentation = PresentedStory(startStory: story, playlist: profilePlaylist(active: profile))
             toastCenter?.show("Masal hazır.", duration: 3.5)
+            let count = subscription.storiesGeneratedCount
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                AppStoreReviewManager.requestReviewIfAppropriate(storiesGenerated: count, requestReview: requestReview)
+            }
         } catch {
             generationError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             toastCenter?.show("Masal üretilemedi. Lütfen tekrar dene.", duration: 4.0)

@@ -4,6 +4,7 @@
 //
 
 import AVFoundation
+import MediaPlayer
 import Observation
 
 enum MixerSound: String, CaseIterable, Identifiable, Sendable {
@@ -40,7 +41,6 @@ enum MixerSound: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Kısa açıklama; çalma listesi ve ana sayfa satırlarında kullanılır.
     var playlistSubtitle: String {
         switch self {
         case .rain: "Rahatlatıcı Doğa"
@@ -52,7 +52,6 @@ enum MixerSound: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Free tier: first three (wiki)
     static var freeTier: [MixerSound] { [.rain, .ocean, .wind] }
 }
 
@@ -62,6 +61,27 @@ final class MixerEngine {
     private var players: [MixerSound: AVAudioPlayer] = [:]
     var levels: [MixerSound: Double] = Dictionary(uniqueKeysWithValues: MixerSound.allCases.map { ($0, 0.4) })
     var enabled: [MixerSound: Bool] = Dictionary(uniqueKeysWithValues: MixerSound.allCases.map { ($0, false) })
+
+    /// Set to true when AudioPlayerService has an active story track.
+    var storyIsActive: Bool = false {
+        didSet { updateNowPlayingIfNeeded() }
+    }
+
+    // MARK: - Focused sound & skip (survives view dismissal)
+
+    /// The currently focused sound for solo white noise playback.
+    var focusedSound: MixerSound = .rain
+
+    /// Ordered playlist for skip commands. Set by WhiteNoisePlayerView.
+    var orderedPlaylist: [MixerSound] = MixerSound.allCases
+
+    /// Subscription manager reference for premium checks during lock screen skip.
+    weak var subscriptionManager: SubscriptionManager?
+
+    /// Audio player reference — mixer stops the story when taking over solo white noise playback.
+    weak var audioPlayerService: AudioPlayerService?
+
+    private var mixerRemoteCommandsWired = false
 
     init() {
         for sound in MixerSound.allCases {
@@ -87,6 +107,7 @@ final class MixerEngine {
             p.stop()
             p.currentTime = 0
         }
+        updateNowPlayingIfNeeded()
     }
 
     func setLevel(_ sound: MixerSound, level: Double) {
@@ -101,14 +122,16 @@ final class MixerEngine {
         }
     }
 
-    /// Yalnızca seçilen sesi açar; diğer katmanları kapatır (oyuncu sekmesi için).
     func solo(_ sound: MixerSound) {
+        focusedSound = sound
+        if let audio = audioPlayerService, audio.hasActiveTrack {
+            audio.stop()
+        }
         for s in MixerSound.allCases {
             setEnabled(s, on: s == sound)
         }
     }
 
-    /// Fade enabled layers from 0 to current levels over `duration` seconds.
     func fadeInAllEnabled(duration: TimeInterval) {
         for s in MixerSound.allCases where enabled[s] == true {
             guard let p = players[s] else { continue }
@@ -117,5 +140,108 @@ final class MixerEngine {
             p.play()
             p.setVolume(target, fadeDuration: duration)
         }
+    }
+
+    // MARK: - Skip logic (self-contained, no view references)
+
+    func skipToNextSound() {
+        let list = orderedPlaylist
+        guard let idx = list.firstIndex(of: focusedSound) else { return }
+        for offset in 1..<list.count {
+            let candidate = list[(idx + offset) % list.count]
+            if subscriptionManager?.canUseSound(candidate) ?? MixerSound.freeTier.contains(candidate) {
+                solo(candidate)
+                return
+            }
+        }
+    }
+
+    func skipToPreviousSound() {
+        let list = orderedPlaylist
+        guard let idx = list.firstIndex(of: focusedSound) else { return }
+        for offset in 1..<list.count {
+            let candidate = list[(idx - offset + list.count) % list.count]
+            if subscriptionManager?.canUseSound(candidate) ?? MixerSound.freeTier.contains(candidate) {
+                solo(candidate)
+                return
+            }
+        }
+    }
+
+    // MARK: - Now Playing for white noise
+
+    private func updateNowPlayingIfNeeded() {
+        guard !storyIsActive else { return }
+        let activeSounds = MixerSound.allCases.filter { enabled[$0] == true }
+        if activeSounds.isEmpty {
+            if !mixerRemoteCommandsWired { return }
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            removeMixerRemoteCommands()
+        } else {
+            wireMixerRemoteCommandsIfNeeded()
+            let title = activeSounds.count == 1 ? activeSounds[0].displayTitle : "Beyaz Gürültü"
+            var info: [String: Any] = [
+                MPMediaItemPropertyTitle: title,
+                MPMediaItemPropertyArtist: "Masal Amca",
+                MPNowPlayingInfoPropertyPlaybackRate: 1.0,
+                MPNowPlayingInfoPropertyDefaultPlaybackRate: 1.0,
+                MPNowPlayingInfoPropertyIsLiveStream: true
+            ]
+            if let artwork = AudioPlayerService.nowPlayingArtwork {
+                info[MPMediaItemPropertyArtwork] = artwork
+            }
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+        }
+    }
+
+    private func wireMixerRemoteCommandsIfNeeded() {
+        guard !mixerRemoteCommandsWired else { return }
+        mixerRemoteCommandsWired = true
+        let center = MPRemoteCommandCenter.shared()
+        center.playCommand.removeTarget(nil)
+        center.pauseCommand.removeTarget(nil)
+        center.nextTrackCommand.removeTarget(nil)
+        center.previousTrackCommand.removeTarget(nil)
+        center.playCommand.isEnabled = true
+        center.pauseCommand.isEnabled = true
+        center.nextTrackCommand.isEnabled = true
+        center.previousTrackCommand.isEnabled = true
+        center.playCommand.addTarget { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                for s in MixerSound.allCases where self.enabled[s] == true {
+                    self.players[s]?.play()
+                }
+            }
+            return .success
+        }
+        center.pauseCommand.addTarget { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                for s in MixerSound.allCases where self.enabled[s] == true {
+                    self.players[s]?.pause()
+                }
+            }
+            return .success
+        }
+        center.nextTrackCommand.addTarget { [weak self] _ in
+            Task { @MainActor in self?.skipToNextSound() }
+            return .success
+        }
+        center.previousTrackCommand.addTarget { [weak self] _ in
+            Task { @MainActor in self?.skipToPreviousSound() }
+            return .success
+        }
+    }
+
+    private func removeMixerRemoteCommands() {
+        mixerRemoteCommandsWired = false
+        let center = MPRemoteCommandCenter.shared()
+        center.playCommand.removeTarget(nil)
+        center.pauseCommand.removeTarget(nil)
+        center.nextTrackCommand.removeTarget(nil)
+        center.previousTrackCommand.removeTarget(nil)
+        center.nextTrackCommand.isEnabled = false
+        center.previousTrackCommand.isEnabled = false
     }
 }

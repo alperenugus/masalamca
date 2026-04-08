@@ -7,7 +7,7 @@ import Foundation
 import SwiftData
 
 /// Full-screen player session: stable `id` so switching tracks does not dismiss the cover.
-struct PresentedStory: Identifiable, Equatable {
+struct PresentedStory: Identifiable, Equatable, Hashable {
     let sessionID: UUID
     let startStory: Story
     let playlist: [Story]
@@ -28,5 +28,9 @@ struct PresentedStory: Identifiable, Equatable {
 
     static func == (lhs: PresentedStory, rhs: PresentedStory) -> Bool {
         lhs.sessionID == rhs.sessionID
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(sessionID)
     }
 }

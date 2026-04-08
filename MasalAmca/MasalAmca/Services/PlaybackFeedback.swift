@@ -70,6 +70,7 @@ final class VolumeMonitor {
     }
 
     /// Sistem medya sesi kapalıyken uyarır; `true` dönerse toast gösterildi.
+    @discardableResult
     func warnIfSilent(toast: ToastCenter) -> Bool {
         guard outputVolume < 0.02 else { return false }
         if let last = lastWarningShown,

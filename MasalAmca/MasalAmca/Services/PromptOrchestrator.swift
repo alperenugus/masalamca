@@ -52,11 +52,11 @@ struct TTSRequestDTO: Codable, Sendable {
 enum PromptOrchestrator {
     static func storyRequest(from profile: ChildProfile) -> StoryGenerateRequestDTO {
         let prefs = StoryPreferences.load(for: profile)
-        let chosenBento = StoryBentoTheme.randomForGeneration(from: prefs.bentoThemes)
+        let hints = StoryBentoTheme.generateHints(from: prefs.bentoThemes)
         return StoryGenerateRequestDTO(
             childName: profile.name,
             ageGroup: profile.ageGroup.rawValue,
-            themes: chosenBento.apiThemeHints,
+            themes: hints,
             behavioralGoal: profile.behavioralGoals.first,
             language: "tr",
             targetLength: StoryLengthPreference.short.rawValue

@@ -22,6 +22,15 @@ struct ChildProfileEditorView: View {
             ScrollView {
                 VStack(spacing: DesignTokens.Spacing.xl) {
                     InputField(title: "Çocuğun İsmi", text: $name, placeholder: "İsim")
+                        .onChange(of: name) { _, newValue in
+                            let words = newValue.split(separator: " ", omittingEmptySubsequences: false)
+                            if words.count > 2 {
+                                name = words.prefix(2).joined(separator: " ")
+                            }
+                            if name.count > 30 {
+                                name = String(name.prefix(30))
+                            }
+                        }
                     // reuse age + themes similar to onboarding (compact)
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Yaş")

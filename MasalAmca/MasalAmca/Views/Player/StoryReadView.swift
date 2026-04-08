@@ -12,7 +12,6 @@ struct StoryReadView: View {
     let story: Story
     let isPlaying: Bool
     var onTogglePlayback: () -> Void
-    var onFinish: () -> Void
 
     @AppStorage("masal_story_read_font_step") private var fontStepRaw: Int = 0
 
@@ -38,71 +37,45 @@ struct StoryReadView: View {
 
     var body: some View {
         let c = theme.colors
-        VStack(spacing: 0) {
-            topBar(c: c)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    readHero(c: c)
-                        .padding(.top, DesignTokens.Spacing.md)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                readHero(c: c)
+                    .padding(.top, DesignTokens.Spacing.md)
 
-                    articleBody(c: c)
-                        .padding(.top, DesignTokens.Spacing.xl)
-                }
-                .padding(.horizontal, DesignTokens.Spacing.lg)
-                .padding(.bottom, DesignTokens.Spacing.xxl)
+                articleBody(c: c)
+                    .padding(.top, DesignTokens.Spacing.xl)
             }
+            .padding(.horizontal, DesignTokens.Spacing.lg)
+            .padding(.bottom, DesignTokens.Spacing.xxl)
         }
         .background(c.surface.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
-        .id(story.id)
-    }
+        .navigationTitle(story.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(c.surface, for: .navigationBar)
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    onTogglePlayback()
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } label: {
+                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(c.primary)
+                }
+                .accessibilityLabel(isPlaying ? "Durdur" : "Oynat")
 
-    private func topBar(c: DreamscapePalette) -> some View {
-        HStack {
-            Button {
-                onFinish()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(c.primary.opacity(0.85))
-                    .frame(width: 44, height: 44)
+                Button {
+                    fontStepRaw = (fontStepRaw + 1) % 3
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } label: {
+                    Image(systemName: "textformat.size")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(c.primary)
+                }
+                .accessibilityLabel("Yazı boyutu")
             }
-            .buttonStyle(.plain)
-
-            Text(story.title)
-                .font(MasalFont.titleMedium())
-                .foregroundStyle(c.primary)
-                .lineLimit(1)
-
-            Spacer()
-
-            Button {
-                onTogglePlayback()
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            } label: {
-                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(c.primary.opacity(0.85))
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isPlaying ? "Durdur" : "Oynat")
-
-            Button {
-                fontStepRaw = (fontStepRaw + 1) % 3
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            } label: {
-                Image(systemName: "textformat.size")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(c.primary.opacity(0.85))
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Yazı boyutu")
         }
-        .padding(.horizontal, DesignTokens.Spacing.md)
-        .padding(.bottom, 12)
-        .background(c.surface.opacity(0.98))
+        .id(story.id)
     }
 
     private func readHero(c: DreamscapePalette) -> some View {
@@ -206,7 +179,7 @@ struct StoryReadView: View {
     }
 
     private func pullQuoteBlock(_ inner: String, c: DreamscapePalette) -> some View {
-        Text("“\(inner)”")
+        Text("\u{201C}\(inner)\u{201D}")
             .font(MasalFont.readerPullQuote(size: 18 * fontScale, relativeTo: .body))
             .italic()
             .foregroundStyle(c.primary.opacity(0.82))

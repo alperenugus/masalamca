@@ -16,6 +16,7 @@ struct RootView: View {
     @Query(sort: \ChildProfile.createdAt) private var childProfiles: [ChildProfile]
 
     @Bindable var subscription: SubscriptionManager
+    @Bindable var audioPlayer: AudioPlayerService
     @Bindable var mixer: MixerEngine
     @Bindable var pinStore: MixerPinStore
     @Bindable var toastCenter: ToastCenter
@@ -25,7 +26,12 @@ struct RootView: View {
         ZStack(alignment: .top) {
             Group {
                 if onboardingComplete {
-                    MainTabView(subscription: subscription, mixer: mixer, pinStore: pinStore)
+                    MainTabView(
+                        subscription: subscription,
+                        audioPlayer: audioPlayer,
+                        mixer: mixer,
+                        pinStore: pinStore
+                    )
                 } else {
                     OnboardingView(subscription: subscription, isComplete: $onboardingComplete)
                 }
@@ -42,6 +48,7 @@ struct RootView: View {
         .environment(\.masalToastCenter, toastCenter)
         .environment(\.masalVolumeMonitor, volumeMonitor)
         .environment(\.masalMixerPinStore, pinStore)
+        .environment(\.masalAudioPlayer, audioPlayer)
         .task {
             hydrateFromSwiftData()
         }

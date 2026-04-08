@@ -31,7 +31,7 @@ final class SubscriptionManager {
     static let freeTierLifetimeGenerationLimit = 2
 
     /// Premium: yerel gün başına en fazla bu kadar yeni masal (SwiftData’daki bugünkü kayıt sayısı ile kontrol).
-    static let premiumDailyGenerationLimit = 3
+    static let premiumDailyGenerationLimit = 2
 
     var products: [Product] = []
     /// `true` yalnızca doğrulanmış ve geçerli abonelik işlemi `Transaction.currentEntitlements` içindeyken.

@@ -10,17 +10,17 @@ struct LibraryView: View {
     @Environment(\.masalThemeManager) private var theme
     @Environment(\.modelContext) private var modelContext
     @Environment(\.masalChildProfileManager) private var profileManager
+    @Environment(\.masalAudioPlayer) private var audioPlayer
 
     @Bindable var subscription: SubscriptionManager
     @Bindable var mixer: MixerEngine
+    @Binding var playerPresentation: PresentedStory?
 
     @Query(sort: \Story.createdAt, order: .reverse) private var stories: [Story]
     @Query private var profiles: [ChildProfile]
 
     @State private var search = ""
     @State private var filter: LibraryFilter = .all
-    @State private var playerPresentation: PresentedStory?
-    @State private var storyAudio = AudioPlayerService()
     @State private var readingStory: Story?
     @State private var pendingStoryDelete: Story?
 
@@ -117,36 +117,17 @@ struct LibraryView: View {
         }
         .scrollContentBackground(.hidden)
         .background(c.surface.ignoresSafeArea())
-        .fullScreenCover(item: $playerPresentation) { wrap in
-            StoryPlayerView(
-                audio: storyAudio,
-                mixer: mixer,
-                subscription: subscription,
-                startStory: wrap.startStory,
-                playlist: wrap.playlist
-            )
-            .masalThemeManager(theme)
-        }
-        .fullScreenCover(isPresented: Binding(
+        .navigationDestination(isPresented: Binding(
             get: { readingStory != nil },
             set: { if !$0 { readingStory = nil } }
         )) {
-            Group {
-                if let s = readingStory {
-                    StoryReadView(
-                        story: s,
-                        isPlaying: storyAudio.isPlaying,
-                        onTogglePlayback: {
-                            if storyAudio.isPlaying {
-                                storyAudio.pause()
-                            } else {
-                                storyAudio.play()
-                            }
-                        },
-                        onFinish: { readingStory = nil }
-                    )
-                        .masalThemeManager(theme)
-                }
+            if let s = readingStory {
+                StoryReadView(
+                    story: s,
+                    isPlaying: false,
+                    onTogglePlayback: {}
+                )
+                .masalThemeManager(theme)
             }
         }
         .onChange(of: active?.id) { _, _ in
@@ -158,6 +139,29 @@ struct LibraryView: View {
                 filter = .all
             }
         }
+        // Push story player as a native navigation push — identical pattern to Masal Ayarları.
+        .navigationDestination(item: $playerPresentation) { wrap in
+            if let audio = audioPlayer {
+                StoryPlayerView(
+                    audio: audio,
+                    mixer: mixer,
+                    subscription: subscription,
+                    startStory: wrap.startStory,
+                    playlist: wrap.playlist
+                )
+            }
+        }
+        .onChange(of: playerPresentation) { _, new in
+            if new == nil {
+                cleanUpAfterPlayerDismissed()
+            }
+        }
+    }
+
+    private func cleanUpAfterPlayerDismissed() {
+        guard let audio = audioPlayer else { return }
+        audio.onPlaybackFinished = nil
+        audio.onTrackChanged = nil
     }
 
     private func storyGenreFingerprint(active: ChildProfile?) -> String {
@@ -175,8 +179,7 @@ struct LibraryView: View {
         let playlist = playlistForProfile(active: active)
         Button {
             playerPresentation = PresentedStory(startStory: s, playlist: playlist)
-        } label: {
-            StoryListRow(
+        } label: {            StoryListRow(
                 title: s.title,
                 durationText: "\(max(1, s.durationSeconds / 60)) dk",
                 dateText: df.string(from: s.createdAt),

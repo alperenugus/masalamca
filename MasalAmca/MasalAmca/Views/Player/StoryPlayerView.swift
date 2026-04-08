@@ -11,7 +11,6 @@ import SwiftUI
 struct StoryPlayerView: View {
     @Environment(\.masalThemeManager) private var theme
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.masalToastCenter) private var toastCenter
     @Environment(\.masalVolumeMonitor) private var volumeMonitor
     @Bindable var audio: AudioPlayerService
@@ -26,6 +25,7 @@ struct StoryPlayerView: View {
     @State private var hasPlayableAudio = false
     @State private var appliedBackgroundMusicPreset = false
     @State private var showStoryRead = false
+    @State private var loadedStoryID: UUID?
 
     init(
         audio: AudioPlayerService,
@@ -44,19 +44,8 @@ struct StoryPlayerView: View {
     var body: some View {
         let c = theme.colors
         ZStack(alignment: .bottom) {
-            LinearGradient(
-                colors: [
-                    c.surface.opacity(0.92),
-                    c.surfaceContainer.opacity(0.98)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-
             ScrollView {
                 VStack(spacing: DesignTokens.Spacing.lg) {
-                    header
                     if sleepTimer.isRunning {
                         sleepTimerBanner
                     }
@@ -90,20 +79,91 @@ struct StoryPlayerView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .background(c.surface.ignoresSafeArea())
+        .navigationTitle("Masal Amca")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(c.surface, for: .navigationBar)
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if hasReadableBody {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showStoryRead = true
+                    } label: {
+                        Image(systemName: "book.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(c.primary)
+                    }
+                    .accessibilityLabel("Masalı oku")
+                }
+
+                Menu {
+                    Button("3 dakika") {
+                        sleepTimer.start(minutes: 3) {
+                            audio.pause()
+                            mixer.stopAll()
+                        }
+                    }
+                    Button("5 dakika") {
+                        sleepTimer.start(minutes: 5) {
+                            audio.pause()
+                            mixer.stopAll()
+                        }
+                    }
+                    Button("10 dakika") {
+                        sleepTimer.start(minutes: 10) {
+                            audio.pause()
+                            mixer.stopAll()
+                        }
+                    }
+                    Button("Zamanlayıcıyı iptal et") { sleepTimer.cancel() }
+                } label: {
+                    Image(systemName: "moon.zzz.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(c.primary)
+                }
+                .accessibilityLabel("Uyku zamanlayıcısı")
+
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                        showMixerPanel.toggle()
+                    }
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(c.primary)
+                }
+                .accessibilityLabel("Beyaz gürültü mikseri")
+            }
+        }
         .animation(.spring(response: 0.34, dampingFraction: 0.88), value: showMixerPanel)
         .task(id: activeStory.id) {
             StoryPreferences.mirrorPlaybackPreferencesToUserDefaults(for: activeStory.profile)
-            await loadAudioIfNeeded()
-            applyBackgroundMusicIfNeeded()
+            audio.setPlaylist(playlist, currentID: activeStory.id)
+            if audio.currentStoryID == activeStory.id, audio.hasActiveTrack {
+                // Already playing this story — just sync local state, don't reload
+                loadedStoryID = activeStory.id
+                hasPlayableAudio = true
+            } else if loadedStoryID != activeStory.id {
+                await loadAudioIfNeeded()
+                applyBackgroundMusicIfNeeded()
+            }
         }
         .onAppear {
             wirePlaybackFinishedHandler()
+            // When the lock screen skips track, sync our local activeStory
+            audio.onTrackChanged = { [self] story in
+                activeStory = story
+                loadedStoryID = story.id
+            }
         }
         .onChange(of: activeStory.id) { _, _ in
             wirePlaybackFinishedHandler()
+            audio.updateCurrentStoryID(activeStory.id)
             appliedBackgroundMusicPreset = false
         }
-        .fullScreenCover(isPresented: $showStoryRead) {
+        .navigationDestination(isPresented: $showStoryRead) {
             StoryReadView(
                 story: activeStory,
                 isPlaying: audio.isPlaying,
@@ -114,20 +174,9 @@ struct StoryPlayerView: View {
                         hintVolumeIfSilentBeforePlayback()
                         audio.play()
                     }
-                },
-                onFinish: { showStoryRead = false }
+                }
             )
-                .masalThemeManager(theme)
-        }
-        .onDisappear {
-            appliedBackgroundMusicPreset = false
-            sleepTimer.cancel()
-            audio.onPlaybackFinished = nil
-            Task {
-                await PlaybackSessionSync.endSession()
-            }
-            audio.pause()
-            mixer.stopAll()
+            .masalThemeManager(theme)
         }
     }
 
@@ -182,94 +231,6 @@ struct StoryPlayerView: View {
             style: .continuous
         ))
         .shadow(color: .black.opacity(0.35), radius: 24, x: 0, y: -8)
-    }
-
-    private var header: some View {
-        let c = theme.colors
-        return ZStack {
-            HStack {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(c.primary)
-                        .frame(width: 40, height: 40)
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                HStack(spacing: 10) {
-                    if hasReadableBody {
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            showStoryRead = true
-                        } label: {
-                            Image(systemName: "book.fill")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(c.primary)
-                                .frame(width: 34, height: 34)
-                                .background(c.surfaceContainerHigh)
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Masalı oku")
-                    }
-
-                    Menu {
-                        Button("3 dakika") {
-                            sleepTimer.start(minutes: 3) {
-                                audio.pause()
-                                mixer.stopAll()
-                            }
-                        }
-                        Button("5 dakika") {
-                            sleepTimer.start(minutes: 5) {
-                                audio.pause()
-                                mixer.stopAll()
-                            }
-                        }
-                        Button("10 dakika") {
-                            sleepTimer.start(minutes: 10) {
-                                audio.pause()
-                                mixer.stopAll()
-                            }
-                        }
-                        Button("Zamanlayıcıyı iptal et") { sleepTimer.cancel() }
-                    } label: {
-                        Image(systemName: "moon.zzz.fill")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(c.primary)
-                            .frame(width: 34, height: 34)
-                            .background(c.surfaceContainerHigh)
-                            .clipShape(Circle())
-                    }
-                    .accessibilityLabel("Uyku zamanlayıcısı")
-
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
-                            showMixerPanel.toggle()
-                        }
-                    } label: {
-                        Image(systemName: "slider.horizontal.3")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(c.primary)
-                            .frame(width: 34, height: 34)
-                            .background(c.surfaceContainerHigh)
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Beyaz gürültü mikseri")
-                }
-            }
-
-            Text("Masal Amca")
-                .font(MasalFont.titleMedium())
-                .foregroundStyle(c.primary)
-        }
-        .padding(.top, 8)
     }
 
     private var sleepTimerBanner: some View {
@@ -415,7 +376,6 @@ struct StoryPlayerView: View {
             Button {
                 if audio.isPlaying {
                     audio.pause()
-                    mixer.stopAll()
                     appliedBackgroundMusicPreset = false
                 } else {
                     hintVolumeIfSilentBeforePlayback()
@@ -577,7 +537,6 @@ struct StoryPlayerView: View {
     private func wirePlaybackFinishedHandler() {
         audio.onPlaybackFinished = { [mixer] in
             Task { @MainActor in
-                // Continuous play: if a sleep timer is running, respect it and do not advance.
                 if !sleepTimer.isRunning, let next = nextStory(after: activeStory, in: playlist) {
                     activeStory = next
                     return
@@ -613,39 +572,39 @@ struct StoryPlayerView: View {
     private func loadAudioIfNeeded() async {
         audio.stop()
         hasPlayableAudio = false
-        if !StoryPreferences.backgroundMusicDuringStory {
-            // Avoid unintended overlap (can sound like artifacts/noise) when narration starts.
-            mixer.stopAll()
-        } else {
-            // Keep only the intended subtle bed of sound.
-            let keep = StoryPreferences.backgroundMusicSoundDuringStory
-            for s in MixerSound.allCases where s != keep {
-                mixer.setEnabled(s, on: false)
-            }
-        }
+        mixer.stopAll()
+        appliedBackgroundMusicPreset = false
         do {
             if let blob = activeStory.audioBlob, !blob.isEmpty {
                 try audio.load(data: blob, title: activeStory.title)
                 hasPlayableAudio = true
+                loadedStoryID = activeStory.id
                 hintVolumeIfSilentBeforePlayback()
                 audio.play()
                 return
             }
-            guard let name = activeStory.audioFileName else { return }
+            guard let name = activeStory.audioFileName else {
+                loadedStoryID = activeStory.id
+                return
+            }
             let url = AudioCacheManager.documentsDirectory().appendingPathComponent(name)
-            guard FileManager.default.fileExists(atPath: url.path) else { return }
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                loadedStoryID = activeStory.id
+                return
+            }
             try audio.load(fileURL: url, title: activeStory.title)
             hasPlayableAudio = true
+            loadedStoryID = activeStory.id
             hintVolumeIfSilentBeforePlayback()
             audio.play()
         } catch {
             hasPlayableAudio = false
+            // Don't set loadedStoryID so the task can retry on next appear
         }
     }
 
     private func hintVolumeIfSilentBeforePlayback() {
         guard let toast = toastCenter, let vol = volumeMonitor else { return }
-        vol.warnIfSilent(toast: toast)
+        _ = vol.warnIfSilent(toast: toast)
     }
-
 }

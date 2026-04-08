@@ -321,8 +321,13 @@ struct StorySettingsView: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignTokens.Spacing.sm) {
                 ForEach(StoryBentoTheme.allCases) { tile in
                     let on = bentoSelection.contains(tile)
+                    let locked = tile.requiresPremium && !subscription.isPremium
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        if locked {
+                            showCommerceParentGate = true
+                            return
+                        }
                         if on {
                             if bentoSelection.count > 1 {
                                 bentoSelection = bentoSelection.subtracting([tile])
@@ -336,11 +341,18 @@ struct StorySettingsView: View {
                                 Image(systemName: tile.systemImage)
                                     .font(.system(size: 26))
                                     .foregroundStyle(on ? c.tertiary : c.secondary)
-                                Text(tile.displayTitle)
-                                    .font(MasalFont.labelMedium())
-                                    .fontWeight(.bold)
-                                    .multilineTextAlignment(.center)
-                                    .foregroundStyle(on ? c.onSurface : c.secondary)
+                                HStack(spacing: 4) {
+                                    Text(tile.displayTitle)
+                                        .font(MasalFont.labelMedium())
+                                        .fontWeight(.bold)
+                                        .multilineTextAlignment(.center)
+                                        .foregroundStyle(on ? c.onSurface : c.secondary)
+                                    if tile.requiresPremium {
+                                        Image(systemName: "crown.fill")
+                                            .font(.caption2)
+                                            .foregroundStyle(c.tertiary)
+                                    }
+                                }
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, DesignTokens.Spacing.md)
@@ -361,7 +373,7 @@ struct StorySettingsView: View {
                         }
                     }
                     .buttonStyle(.plain)
-                    .opacity(on ? 1 : 0.72)
+                    .opacity(on ? 1 : (locked ? 0.55 : 0.72))
                     .accessibilityLabel(tile.displayTitle)
                     .accessibilityAddTraits(on ? [.isSelected] : [])
                 }
@@ -402,14 +414,38 @@ struct StorySettingsView: View {
                             Text("Seçili ses")
                                 .font(MasalFont.bodyMedium())
                                 .foregroundStyle(c.onSurface)
-                            Text(backgroundSound.displayTitle)
-                                .font(MasalFont.labelSmall())
-                                .foregroundStyle(c.onSurfaceVariant.opacity(0.75))
+                            HStack(spacing: 6) {
+                                Text(backgroundSound.displayTitle)
+                                    .font(MasalFont.labelSmall())
+                                    .foregroundStyle(c.onSurfaceVariant.opacity(0.75))
+                                if !MixerSound.freeTier.contains(backgroundSound) {
+                                    Image(systemName: "crown.fill")
+                                        .font(.caption2)
+                                        .foregroundStyle(c.tertiary)
+                                }
+                            }
                         }
                         Spacer()
-                        Picker("Seçili ses", selection: $backgroundSound) {
+                        Picker("Seçili ses", selection: Binding(
+                            get: { backgroundSound },
+                            set: { newSound in
+                                if subscription.canUseSound(newSound) {
+                                    backgroundSound = newSound
+                                } else {
+                                    showCommerceParentGate = true
+                                }
+                            }
+                        )) {
                             ForEach(MixerSound.allCases) { s in
-                                Text(s.displayTitle).tag(s)
+                                Label {
+                                    Text(s.displayTitle)
+                                } icon: {
+                                    if !MixerSound.freeTier.contains(s) {
+                                        Image(systemName: "crown.fill")
+                                            .foregroundStyle(c.tertiary)
+                                    }
+                                }
+                                .tag(s)
                             }
                         }
                         .labelsHidden()
@@ -458,10 +494,19 @@ struct StorySettingsView: View {
             n = .yumuşakBulut
         }
         narrator = n
-        bentoSelection = Set(snap.bentoThemes)
+        var themes = snap.bentoThemes
+        if !subscription.isPremium {
+            themes = themes.filter { !$0.requiresPremium }
+            if themes.isEmpty { themes = [.adventure] }
+        }
+        bentoSelection = Set(themes)
         autoStop = snap.autoStopAfterStory
         backgroundMusic = snap.backgroundMusicInPlayer
-        backgroundSound = snap.backgroundSoundInPlayer
+        var bgSound = snap.backgroundSoundInPlayer
+        if !subscription.canUseSound(bgSound) {
+            bgSound = .rain
+        }
+        backgroundSound = bgSound
     }
 
     private func schedulePersistSnapshot() {

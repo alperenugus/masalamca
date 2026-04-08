@@ -16,7 +16,6 @@ struct WhiteNoisePlayerView: View {
     @Bindable var mixer: MixerEngine
     @Bindable var pinStore: MixerPinStore
 
-    @State private var focusedSound: MixerSound = .rain
     @State private var showCommerceParentGate = false
     @State private var showPaywall = false
 
@@ -25,7 +24,7 @@ struct WhiteNoisePlayerView: View {
     }
 
     private var focusedPlaying: Bool {
-        mixer.enabled[focusedSound] == true
+        mixer.enabled[mixer.focusedSound] == true
     }
 
     var body: some View {
@@ -57,6 +56,10 @@ struct WhiteNoisePlayerView: View {
         }
         .onAppear {
             syncFocusedFromMixerIfNeeded()
+            mixer.orderedPlaylist = orderedPlaylist
+        }
+        .onChange(of: pinStore.pinnedRawValues) { _, _ in
+            mixer.orderedPlaylist = orderedPlaylist
         }
         .sheet(isPresented: $showCommerceParentGate) {
             ParentalGateSheet(kind: .commerce) {
@@ -89,7 +92,7 @@ struct WhiteNoisePlayerView: View {
 
     private var hero: some View {
         let c = theme.colors
-        let sound = focusedSound
+        let sound = mixer.focusedSound
         let premiumOnly = !MixerSound.freeTier.contains(sound)
         return VStack(spacing: DesignTokens.Spacing.md) {
             ZStack {
@@ -219,7 +222,7 @@ struct WhiteNoisePlayerView: View {
 
     private func noisePlaylistRow(sound: MixerSound) -> some View {
         let c = theme.colors
-        let isCurrent = sound == focusedSound
+        let isCurrent = sound == mixer.focusedSound
         let on = mixer.enabled[sound] == true
         let subtitle: String = {
             if isCurrent {
@@ -303,14 +306,14 @@ struct WhiteNoisePlayerView: View {
 
     private func syncFocusedFromMixerIfNeeded() {
         for s in orderedPlaylist where mixer.enabled[s] == true {
-            focusedSound = s
+            mixer.focusedSound = s
             return
         }
     }
 
     private func selectSound(_ sound: MixerSound) {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        if sound == focusedSound {
+        if sound == mixer.focusedSound {
             toggleFocusedPlayback()
             return
         }
@@ -318,38 +321,34 @@ struct WhiteNoisePlayerView: View {
             showCommerceParentGate = true
             return
         }
-        let wasPlaying = focusedPlaying
-        focusedSound = sound
-        if wasPlaying {
-            hintVolumeIfSilent()
-            mixer.solo(sound)
-        }
+        hintVolumeIfSilent()
+        mixer.solo(sound)
     }
 
     private func toggleFocusedPlayback() {
-        guard subscription.canUseSound(focusedSound) else {
+        guard subscription.canUseSound(mixer.focusedSound) else {
             showCommerceParentGate = true
             return
         }
         if focusedPlaying {
-            mixer.setEnabled(focusedSound, on: false)
+            mixer.setEnabled(mixer.focusedSound, on: false)
         } else {
             hintVolumeIfSilent()
-            mixer.solo(focusedSound)
+            mixer.solo(mixer.focusedSound)
         }
     }
 
     private func stepFocus(delta: Int) {
-        guard let idx = orderedPlaylist.firstIndex(of: focusedSound) else { return }
-        let n = orderedPlaylist.count
-        let nextIndex = (idx + delta + n) % n
-        let next = orderedPlaylist[nextIndex]
+        let list = orderedPlaylist
+        guard let idx = list.firstIndex(of: mixer.focusedSound) else { return }
+        let nextIdx = (idx + delta + list.count) % list.count
+        let next = list[nextIdx]
         guard subscription.canUseSound(next) else {
             showCommerceParentGate = true
             return
         }
         let wasPlaying = focusedPlaying
-        focusedSound = next
+        mixer.focusedSound = next
         if wasPlaying {
             hintVolumeIfSilent()
             mixer.solo(next)

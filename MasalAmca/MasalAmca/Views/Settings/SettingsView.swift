@@ -9,6 +9,7 @@ import SwiftUI
 private enum CommerceParentGateAction: String, Identifiable {
     case openPaywall
     case restorePurchases
+    case manageSubscription
     var id: String { rawValue }
 }
 
@@ -23,6 +24,7 @@ struct SettingsView: View {
     @Query private var profiles: [ChildProfile]
     @State private var commerceParentGate: CommerceParentGateAction? = nil
     @State private var showPaywall = false
+    @State private var showManageSubscription = false
     @State private var showEditor = false
     @State private var pendingProfileDeleteOffsets: IndexSet?
 
@@ -49,7 +51,13 @@ struct SettingsView: View {
                         Text(subscription.isPremium ? "Aktif" : "Ücretsiz")
                             .foregroundStyle(c.secondary)
                     }
-                    Button("Aboneliği Yönet") { commerceParentGate = .openPaywall }
+                    if subscription.isPremium {
+                        Button("Aboneliği Yönet / İptal Et") {
+                            commerceParentGate = .manageSubscription
+                        }
+                    } else {
+                        Button("Premium'a Yükselt") { commerceParentGate = .openPaywall }
+                    }
                     Button("Satın Alımları Geri Yükle") {
                         commerceParentGate = .restorePurchases
                     }
@@ -182,11 +190,14 @@ struct SettingsView: View {
                         showPaywall = true
                     case .restorePurchases:
                         Task { await subscription.restore() }
+                    case .manageSubscription:
+                        showManageSubscription = true
                     }
                 }
                 .masalThemeManager(theme)
                 .presentationDetents([.medium, .large])
             }
+            .manageSubscriptionsSheet(isPresented: $showManageSubscription)
             .sheet(isPresented: $showPaywall) {
                 PaywallView(subscription: subscription) { showPaywall = false }
                     .presentationDetents([.large])

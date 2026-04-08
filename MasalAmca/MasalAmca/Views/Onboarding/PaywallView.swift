@@ -191,6 +191,25 @@ struct PaywallView: View {
                 }
             }
 
+            if let trialText = SubscriptionPaywallCopy.trialBanner(for: chosenProduct) {
+                HStack(spacing: DesignTokens.Spacing.sm) {
+                    Image(systemName: "gift.fill")
+                        .foregroundStyle(c.tertiary)
+                    Text(trialText)
+                        .font(MasalFont.bodyMedium())
+                        .foregroundStyle(c.onSurface)
+                }
+                .padding(DesignTokens.Spacing.md)
+                .frame(maxWidth: .infinity)
+                .background(c.tertiary.opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
+                        .stroke(c.tertiary.opacity(0.25), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous))
+                .padding(.horizontal)
+            }
+
             if isPurchasing {
                 ProgressView()
                     .tint(c.primary)

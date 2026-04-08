@@ -6,10 +6,7 @@
 import AVFoundation
 import MediaPlayer
 import Observation
-
-#if canImport(UIKit)
-import UIKit
-#endif
+import SwiftUI
 
 @Observable
 @MainActor
@@ -24,18 +21,52 @@ final class AudioPlayerService: NSObject {
     private var remoteCommandsWired = false
     private var sessionObserversInstalled = false
 
+    /// True when a track is loaded (regardless of play/pause state).
+    var hasActiveTrack: Bool { duration > 0 }
+
     /// Called when narration reaches natural end (e.g. crossfade into white noise).
     var onPlaybackFinished: (() -> Void)?
+
+    // MARK: - Playlist tracking (survives player view dismissal)
+
+    private(set) var playlist: [Story] = []
+    private(set) var currentStoryID: UUID?
+
+    var hasNextTrack: Bool {
+        guard let id = currentStoryID,
+              let idx = playlist.firstIndex(where: { $0.id == id }) else { return false }
+        return idx + 1 < playlist.count
+    }
+
+    var hasPreviousTrack: Bool {
+        guard let id = currentStoryID,
+              let idx = playlist.firstIndex(where: { $0.id == id }) else { return false }
+        return idx > 0
+    }
+
+    /// Called by the view when it wants to be notified that the user skipped track from the lock screen.
+    var onTrackChanged: ((Story) -> Void)?
 
     override init() {
         super.init()
         installAudioSessionObserversIfNeeded()
     }
 
-    private var nowPlayingTitle: String = "Masal"
+    private(set) var nowPlayingTitle: String = "Masal"
+
+    func setPlaylist(_ stories: [Story], currentID: UUID) {
+        playlist = stories
+        currentStoryID = currentID
+        refreshSkipCommandState()
+    }
+
+    func updateCurrentStoryID(_ id: UUID) {
+        currentStoryID = id
+        refreshSkipCommandState()
+    }
 
     func load(fileURL: URL, title: String = "Masal") throws {
-        stop()
+        stopPlayer()
         nowPlayingTitle = title
         let p = try AVAudioPlayer(contentsOf: fileURL)
         p.delegate = self
@@ -49,7 +80,7 @@ final class AudioPlayerService: NSObject {
     }
 
     func load(data: Data, title: String = "Masal") throws {
-        stop()
+        stopPlayer()
         nowPlayingTitle = title
         let p = try AVAudioPlayer(data: data)
         p.delegate = self
@@ -79,7 +110,18 @@ final class AudioPlayerService: NSObject {
         debugLog("pause()")
     }
 
+    /// Fully stop playback and clear Now Playing.
     func stop() {
+        stopPlayer()
+        playlist = []
+        currentStoryID = nil
+        onPlaybackFinished = nil
+        onTrackChanged = nil
+        debugLog("stop()")
+    }
+
+    /// Stop the player and clear remote commands, but keep playlist state.
+    private func stopPlayer() {
         player?.stop()
         player = nil
         isPlaying = false
@@ -91,7 +133,10 @@ final class AudioPlayerService: NSObject {
         let center = MPRemoteCommandCenter.shared()
         center.playCommand.removeTarget(nil)
         center.pauseCommand.removeTarget(nil)
-        debugLog("stop()")
+        center.nextTrackCommand.removeTarget(nil)
+        center.previousTrackCommand.removeTarget(nil)
+        center.nextTrackCommand.isEnabled = false
+        center.previousTrackCommand.isEnabled = false
     }
 
     func seek(to time: TimeInterval) {
@@ -105,6 +150,55 @@ final class AudioPlayerService: NSObject {
         guard duration > 0 else { return 0 }
         return CGFloat(currentTime / duration)
     }
+
+    // MARK: - Skip logic
+
+    func skipToNextPublic() { skipToNext() }
+    func skipToPreviousPublic() { skipToPrevious() }
+
+    private func skipToNext() {
+        guard let id = currentStoryID,
+              let idx = playlist.firstIndex(where: { $0.id == id }),
+              idx + 1 < playlist.count else { return }
+        let next = playlist[idx + 1]
+        loadAndPlay(story: next)
+    }
+
+    private func skipToPrevious() {
+        guard let id = currentStoryID,
+              let idx = playlist.firstIndex(where: { $0.id == id }),
+              idx > 0 else { return }
+        let prev = playlist[idx - 1]
+        loadAndPlay(story: prev)
+    }
+
+    private func loadAndPlay(story: Story) {
+        currentStoryID = story.id
+        do {
+            if let blob = story.audioBlob, !blob.isEmpty {
+                try load(data: blob, title: story.title)
+                play()
+            } else if let name = story.audioFileName {
+                let url = AudioCacheManager.documentsDirectory().appendingPathComponent(name)
+                guard FileManager.default.fileExists(atPath: url.path) else { return }
+                try load(fileURL: url, title: story.title)
+                play()
+            }
+        } catch {
+            debugLog("loadAndPlay failed: \(error)")
+        }
+        refreshSkipCommandState()
+        onTrackChanged?(story)
+    }
+
+    private func refreshSkipCommandState() {
+        guard remoteCommandsWired else { return }
+        let center = MPRemoteCommandCenter.shared()
+        center.nextTrackCommand.isEnabled = hasNextTrack
+        center.previousTrackCommand.isEnabled = hasPreviousTrack
+    }
+
+    // MARK: - Timer
 
     private func startTimer() {
         stopTimer()
@@ -123,14 +217,12 @@ final class AudioPlayerService: NSObject {
         timer = nil
     }
 
-    private static let nowPlayingArtwork: MPMediaItemArtwork? = {
-        #if canImport(UIKit)
+    // MARK: - Now Playing
+
+    static let nowPlayingArtwork: MPMediaItemArtwork? = {
         guard let image = UIImage(named: "NowPlayingArtwork") else { return nil }
         let size = CGSize(width: 512, height: 512)
         return MPMediaItemArtwork(boundsSize: size) { _ in image }
-        #else
-        return nil
-        #endif
     }()
 
     private func wireRemoteTransportIfNeeded() {
@@ -139,8 +231,12 @@ final class AudioPlayerService: NSObject {
         let center = MPRemoteCommandCenter.shared()
         center.playCommand.removeTarget(nil)
         center.pauseCommand.removeTarget(nil)
+        center.nextTrackCommand.removeTarget(nil)
+        center.previousTrackCommand.removeTarget(nil)
         center.playCommand.isEnabled = true
         center.pauseCommand.isEnabled = true
+        center.nextTrackCommand.isEnabled = hasNextTrack
+        center.previousTrackCommand.isEnabled = hasPreviousTrack
         center.playCommand.addTarget { [weak self] _ in
             Task { @MainActor in self?.play() }
             return .success
@@ -149,15 +245,24 @@ final class AudioPlayerService: NSObject {
             Task { @MainActor in self?.pause() }
             return .success
         }
+        center.nextTrackCommand.addTarget { [weak self] _ in
+            Task { @MainActor in self?.skipToNext() }
+            return .success
+        }
+        center.previousTrackCommand.addTarget { [weak self] _ in
+            Task { @MainActor in self?.skipToPrevious() }
+            return .success
+        }
     }
 
-    private func publishFullNowPlayingInfo(title: String, artist: String = "Masal Amca") {
+    func publishFullNowPlayingInfo(title: String, artist: String = "Masal Amca") {
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: title,
             MPMediaItemPropertyArtist: artist,
             MPMediaItemPropertyPlaybackDuration: duration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
-            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyDefaultPlaybackRate: 1.0
         ]
         if let art = Self.nowPlayingArtwork {
             info[MPMediaItemPropertyArtwork] = art
@@ -178,6 +283,8 @@ final class AudioPlayerService: NSObject {
         #endif
     }
 
+    // MARK: - Session observers
+
     private func installAudioSessionObserversIfNeeded() {
         guard !sessionObserversInstalled else { return }
         sessionObserversInstalled = true
@@ -188,6 +295,22 @@ final class AudioPlayerService: NSObject {
             let t = n.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
             let type = AVAudioSession.InterruptionType(rawValue: t ?? 0)
             self.debugLog("AVAudioSession interruption: \(String(describing: type))")
+            if type == .began {
+                Task { @MainActor in
+                    self.player?.pause()
+                    self.isPlaying = false
+                    self.stopTimer()
+                    self.publishFullNowPlayingInfo(title: self.nowPlayingTitle)
+                }
+            } else if type == .ended {
+                let opts = n.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+                let shouldResume = AVAudioSession.InterruptionOptions(rawValue: opts).contains(.shouldResume)
+                Task { @MainActor in
+                    if shouldResume, self.player != nil {
+                        self.play()
+                    }
+                }
+            }
         }
         nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { [weak self] n in
             guard let self else { return }
@@ -211,5 +334,18 @@ extension AudioPlayerService: AVAudioPlayerDelegate {
             self.onPlaybackFinished = nil
             cb?()
         }
+    }
+}
+
+// MARK: - Environment Key
+
+private enum MasalAudioPlayerKey: EnvironmentKey {
+    static let defaultValue: AudioPlayerService? = nil
+}
+
+extension EnvironmentValues {
+    var masalAudioPlayer: AudioPlayerService? {
+        get { self[MasalAudioPlayerKey.self] }
+        set { self[MasalAudioPlayerKey.self] = newValue }
     }
 }

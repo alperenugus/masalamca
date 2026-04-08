@@ -37,28 +37,51 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
     case adventure
     case nature
     case space
-    case fairyTaleCastle
     case ocean
     case friendship
     case dreams
     case dinosaurs
     case vehicles
     case robots
+    case animals
+    case music
+    case seasons
+    case pirates
+    case princesKnight
+    case magicForest
 
     var id: String { rawValue }
+
+    var requiresPremium: Bool {
+        switch self {
+        case .adventure, .nature, .animals, .friendship, .dreams, .space:
+            false
+        case .ocean, .dinosaurs, .vehicles, .robots, .music, .seasons, .pirates, .princesKnight, .magicForest:
+            true
+        }
+    }
+
+    static var freeTier: [StoryBentoTheme] {
+        allCases.filter { !$0.requiresPremium }
+    }
 
     var displayTitle: String {
         switch self {
         case .adventure: "Macera"
         case .nature: "Doğa"
         case .space: "Uzay"
-        case .fairyTaleCastle: "Masal"
         case .ocean: "Deniz"
         case .friendship: "Arkadaşlık"
         case .dreams: "Rüya"
         case .dinosaurs: "Dinozor"
         case .vehicles: "Araçlar"
         case .robots: "Robot"
+        case .animals: "Hayvanlar"
+        case .music: "Müzik"
+        case .seasons: "Mevsimler"
+        case .pirates: "Korsanlar"
+        case .princesKnight: "Prenses & Şövalye"
+        case .magicForest: "Sihirli Orman"
         }
     }
 
@@ -67,48 +90,63 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
         case .adventure: "safari.fill"
         case .nature: "leaf.fill"
         case .space: "star.fill"
-        case .fairyTaleCastle: "building.columns.fill"
         case .ocean: "water.waves"
         case .friendship: "heart.circle.fill"
         case .dreams: "moon.zzz.fill"
         case .dinosaurs: "lizard.fill"
         case .vehicles: "car.fill"
         case .robots: "gearshape.2.fill"
+        case .animals: "pawprint.fill"
+        case .music: "music.note"
+        case .seasons: "cloud.sun.fill"
+        case .pirates: "flag.fill"
+        case .princesKnight: "crown.fill"
+        case .magicForest: "tree.fill"
         }
     }
 
     var apiThemeHints: [String] {
         switch self {
         case .adventure:
-            ["macera, keşif, cesaret"]
+            ["macera ve keşif", "cesaret ve merak", "bilinmeyen toprakları keşfetme"]
         case .nature:
-            ["doğa, orman, hayvanlar, huzur"]
+            ["doğa ve orman", "ağaçlar ve çiçekler arasında huzur", "doğanın sesleri ve kokuları"]
         case .space:
-            ["uzay, yıldızlar, gezegenler"]
-        case .fairyTaleCastle:
-            ["masal dünyası, krallık, sihir"]
+            ["uzay ve yıldızlar", "gezegenler arası yolculuk", "gökyüzünün sırları"]
         case .ocean:
-            ["deniz, dalgalar, deniz canlıları, kumsal"]
+            ["deniz ve dalgalar", "deniz canlıları ve mercan resifleri", "kumsal ve deniz feneri"]
         case .friendship:
-            ["arkadaşlık, paylaşma, iş birliği, neşe"]
+            ["arkadaşlık ve paylaşma", "iş birliği ve birlikte başarma", "yeni arkadaşlarla tanışma"]
         case .dreams:
-            ["rüyalar, yumuşak geçişler, hayal gücü, uyku"]
+            ["rüyalar ve hayal gücü", "yumuşak geçişler ve uyku", "bulutların üzerinde süzülme"]
         case .dinosaurs:
-            ["dinozorlar, tarih öncesi macera, merak (korku yok)"]
+            ["dinozorlar ve tarih öncesi dünya", "nazik dev dinozorlar", "merak dolu keşif (korku yok)"]
         case .vehicles:
-            ["arabalar, trenler, yolculuk, keşif"]
+            ["arabalar ve trenler", "uçaklar ve gemiler", "yolculuk ve keşif macerası"]
         case .robots:
-            ["robotlar, icat, teknoloji, yardımsever makineler"]
+            ["robotlar ve icatlar", "teknoloji ve yardımsever makineler", "yaratıcı mühendislik"]
+        case .animals:
+            ["sevimli hayvanlar", "orman ve çiftlik hayvanlarıyla arkadaşlık", "hayvan yavruları ve onların maceraları"]
+        case .music:
+            ["müzik ve melodiler", "enstrümanlar ve ritim", "şarkı söyleyen karakterler ve dans"]
+        case .seasons:
+            ["mevsimler ve hava durumu", "kar taneleri veya yaz güneşi", "sonbahar yaprakları veya ilkbahar çiçekleri"]
+        case .pirates:
+            ["korsanlar ve hazine avı", "gemiler ve adalar", "harita ve pusula ile macera"]
+        case .princesKnight:
+            ["cesur şövalye ve nazik prenses", "kale ve krallık", "cesaret ve nezaketle zorlukları aşma"]
+        case .magicForest:
+            ["sihirli orman ve büyülü ağaçlar", "konuşan hayvanlar ve periler", "orman derinliklerindeki gizli dünya"]
         }
     }
 
     func asProfileThemes() -> [StoryTheme] {
         switch self {
-        case .adventure, .dinosaurs, .vehicles: [.magic]
-        case .nature, .ocean: [.animals]
+        case .adventure, .dinosaurs, .vehicles, .pirates: [.magic]
+        case .nature, .ocean, .animals, .magicForest: [.animals]
         case .space, .robots: [.space]
-        case .fairyTaleCastle, .dreams: [.fairyTale]
-        case .friendship: [.magic, .fairyTale]
+        case .dreams, .princesKnight, .seasons: [.fairyTale]
+        case .friendship, .music: [.magic, .fairyTale]
         }
     }
 
@@ -116,7 +154,7 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
         switch profileTheme {
         case .animals: .nature
         case .space: .space
-        case .fairyTale: .fairyTaleCastle
+        case .fairyTale: .dreams
         case .magic, .none: .adventure
         }
     }
@@ -124,7 +162,11 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
     /// Virgülle ayrılmış `rawValue` listesi (tek eski kayıt da geçerli).
     static func parsed(fromCommaSeparated raw: String) -> [StoryBentoTheme] {
         let parts = raw.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-        let themes = parts.compactMap { StoryBentoTheme(rawValue: String($0)) }
+        var themes = parts.compactMap { StoryBentoTheme(rawValue: String($0)) }
+        // Migrate old fairyTaleCastle selections to dreams
+        if parts.contains("fairyTaleCastle"), !themes.contains(.dreams) {
+            themes.append(.dreams)
+        }
         return Array(Set(themes)).sorted { $0.rawValue < $1.rawValue }
     }
 
@@ -150,10 +192,26 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
         return result.isEmpty ? [.fairyTale] : result
     }
 
-    /// Masal üretiminde seçilen temalardan biri (her istekte rastgele).
+    /// Masal üretiminde seçilen temalardan biri veya ikisinin karışımı.
+    /// ~30% of the time blends hints from two selected themes for variety.
     static func randomForGeneration(from selection: [StoryBentoTheme]) -> StoryBentoTheme {
         let n = normalizedSelection(selection)
         return n.randomElement() ?? .adventure
+    }
+
+    /// Richer hint generation: sometimes blends two themes for unexpected combinations.
+    static func generateHints(from selection: [StoryBentoTheme]) -> [String] {
+        let n = normalizedSelection(selection)
+        let primary = n.randomElement() ?? .adventure
+        if n.count >= 2, Int.random(in: 0..<10) < 3 {
+            let others = n.filter { $0 != primary }
+            if let secondary = others.randomElement() {
+                let primaryHint = primary.apiThemeHints.randomElement() ?? primary.apiThemeHints[0]
+                let secondaryHint = secondary.apiThemeHints.randomElement() ?? secondary.apiThemeHints[0]
+                return [primaryHint, secondaryHint]
+            }
+        }
+        return primary.apiThemeHints
     }
 }
 
