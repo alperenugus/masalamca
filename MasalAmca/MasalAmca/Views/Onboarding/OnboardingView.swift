@@ -38,13 +38,16 @@ struct OnboardingView: View {
         ZStack(alignment: .bottom) {
             TabView(selection: $page) {
                 page1Welcome.tag(0)
-                if nameIsValid {
-                    page2Themes.tag(1)
-                    page3Comparison.tag(2)
-                }
+                page2Themes.tag(1)
+                page3Comparison.tag(2)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.spring(response: 0.4, dampingFraction: 0.9), value: page)
+            .onChange(of: page) { _, newPage in
+                if !nameIsValid && newPage > 0 {
+                    page = 0
+                }
+            }
 
             dotIndicator
                 .padding(.bottom, 24)
