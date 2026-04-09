@@ -120,6 +120,12 @@ final class AudioPlayerService: NSObject {
         debugLog("stop()")
     }
 
+    /// Stop current playback without clearing playlist state or callbacks.
+    func stopCurrentPlayback() {
+        stopPlayer()
+        debugLog("stopCurrentPlayback()")
+    }
+
     /// Stop the player and clear remote commands, but keep playlist state.
     private func stopPlayer() {
         player?.stop()

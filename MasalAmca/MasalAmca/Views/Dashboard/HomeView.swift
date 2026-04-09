@@ -33,7 +33,6 @@ struct HomeView: View {
     @State private var pendingStoryDelete: Story?
     @State private var generationToastArmed = false
     @State private var randomQuickNoisePick: [MixerSound]?
-
     private let storyService = StoryService()
 
     private func todayStartEnd() -> (start: Date, end: Date) {
@@ -537,9 +536,12 @@ struct HomeView: View {
                 modelContext.insert(demo)
                 subscription.registerStoryGenerated(modelContext: modelContext)
                 try modelContext.save()
-                mixer.stopAll()
-                playerPresentation = PresentedStory(startStory: demo, playlist: profilePlaylist(active: profile))
-                toastCenter?.show("Masal hazır.", duration: 3.5)
+                if tabSelection == .home {
+                    mixer.stopAll()
+                    playerPresentation = PresentedStory(startStory: demo, playlist: profilePlaylist(active: profile))
+                } else {
+                    toastCenter?.show("Masal hazır! Kütüphaneden dinleyebilirsin.", duration: 4.0)
+                }
                 let count = subscription.storiesGeneratedCount
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(2))
@@ -573,9 +575,12 @@ struct HomeView: View {
             }
             subscription.registerStoryGenerated(modelContext: modelContext)
             try modelContext.save()
-            mixer.stopAll()
-            playerPresentation = PresentedStory(startStory: story, playlist: profilePlaylist(active: profile))
-            toastCenter?.show("Masal hazır.", duration: 3.5)
+            if tabSelection == .home {
+                mixer.stopAll()
+                playerPresentation = PresentedStory(startStory: story, playlist: profilePlaylist(active: profile))
+            } else {
+                toastCenter?.show("Masal hazır! Kütüphaneden dinleyebilirsin.", duration: 4.0)
+            }
             let count = subscription.storiesGeneratedCount
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(2))

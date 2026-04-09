@@ -31,6 +31,64 @@ enum StoryLengthPreference: String, CaseIterable, Sendable {
     }
 }
 
+// MARK: - Tema kategorileri (UI gruplandırma)
+
+enum StoryThemeCategory: String, CaseIterable, Identifiable, Sendable {
+    case adventureExploration
+    case natureAnimals
+    case fantasyWorld
+    case dailyLife
+    case valuesEducation
+
+    var id: String { rawValue }
+
+    var displayTitle: String {
+        switch self {
+        case .adventureExploration: "Macera & Keşif"
+        case .natureAnimals: "Doğa & Hayvanlar"
+        case .fantasyWorld: "Hayal Dünyası"
+        case .dailyLife: "Günlük Hayat"
+        case .valuesEducation: "Değerler Eğitimi"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .adventureExploration: "safari.fill"
+        case .natureAnimals: "leaf.fill"
+        case .fantasyWorld: "sparkles"
+        case .dailyLife: "house.fill"
+        case .valuesEducation: "heart.circle.fill"
+        }
+    }
+
+    var themes: [StoryBentoTheme] {
+        switch self {
+        case .adventureExploration: [.adventure, .space, .pirates, .ocean]
+        case .natureAnimals: [.nature, .animals, .seasons, .magicForest]
+        case .fantasyWorld: [.dreams, .princesKnight, .robots, .dinosaurs]
+        case .dailyLife: [.friendship, .music, .vehicles]
+        case .valuesEducation: [.durustluk, .dogruluk, .sevgi, .caliskanlik, .saygi, .comertlik, .adalet, .sorumluluk, .yardimseverlik]
+        }
+    }
+
+    var hasPremiumThemes: Bool {
+        themes.contains { $0.requiresPremium }
+    }
+
+    var allPremium: Bool {
+        themes.allSatisfy { $0.requiresPremium }
+    }
+
+    func freeThemes() -> [StoryBentoTheme] {
+        themes.filter { !$0.requiresPremium }
+    }
+
+    func selectedCount(in selection: Set<StoryBentoTheme>) -> Int {
+        themes.filter { selection.contains($0) }.count
+    }
+}
+
 // MARK: - Hikaye teması (bento → API + profil eşlemesi)
 
 enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
@@ -49,20 +107,43 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
     case pirates
     case princesKnight
     case magicForest
+    /// Ücretsiz — değer temaları
+    case durustluk
+    case dogruluk
+    case sevgi
+    /// Premium — değer temaları
+    case caliskanlik
+    case saygi
+    case comertlik
+    case adalet
+    case sorumluluk
+    case yardimseverlik
 
     var id: String { rawValue }
 
     var requiresPremium: Bool {
         switch self {
-        case .adventure, .nature, .animals, .friendship, .dreams, .space:
+        case .adventure, .nature, .animals, .friendship, .dreams, .space,
+             .durustluk, .dogruluk, .sevgi:
             false
-        case .ocean, .dinosaurs, .vehicles, .robots, .music, .seasons, .pirates, .princesKnight, .magicForest:
+        case .ocean, .dinosaurs, .vehicles, .robots, .music, .seasons, .pirates, .princesKnight, .magicForest,
+             .caliskanlik, .saygi, .comertlik, .adalet, .sorumluluk, .yardimseverlik:
             true
         }
     }
 
     static var freeTier: [StoryBentoTheme] {
         allCases.filter { !$0.requiresPremium }
+    }
+
+    var isValueTheme: Bool {
+        switch self {
+        case .durustluk, .dogruluk, .sevgi, .caliskanlik, .saygi,
+             .comertlik, .adalet, .sorumluluk, .yardimseverlik:
+            true
+        default:
+            false
+        }
     }
 
     var displayTitle: String {
@@ -82,6 +163,15 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
         case .pirates: "Korsanlar"
         case .princesKnight: "Prenses & Şövalye"
         case .magicForest: "Sihirli Orman"
+        case .durustluk: "Dürüstlük"
+        case .dogruluk: "Doğruluk"
+        case .sevgi: "Sevgi"
+        case .caliskanlik: "Çalışkanlık"
+        case .saygi: "Saygı"
+        case .comertlik: "Cömertlik"
+        case .adalet: "Adalet"
+        case .sorumluluk: "Sorumluluk"
+        case .yardimseverlik: "Yardımseverlik"
         }
     }
 
@@ -102,6 +192,15 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
         case .pirates: "flag.fill"
         case .princesKnight: "crown.fill"
         case .magicForest: "tree.fill"
+        case .durustluk: "checkmark.seal.fill"
+        case .dogruluk: "text.magnifyingglass"
+        case .sevgi: "heart.fill"
+        case .caliskanlik: "flame.fill"
+        case .saygi: "hands.clap.fill"
+        case .comertlik: "gift.fill"
+        case .adalet: "scalemass.fill"
+        case .sorumluluk: "checklist"
+        case .yardimseverlik: "figure.and.child.holdinghands"
         }
     }
 
@@ -137,6 +236,24 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
             ["cesur şövalye ve nazik prenses", "kale ve krallık", "cesaret ve nezaketle zorlukları aşma"]
         case .magicForest:
             ["sihirli orman ve büyülü ağaçlar", "konuşan hayvanlar ve periler", "orman derinliklerindeki gizli dünya"]
+        case .durustluk:
+            ["hikayenin ana değeri: dürüstlük — doğru olanı söylemenin güzelliği", "küçük bir durumu doğru ve nazikçe anlatma cesareti", "içtenlik ve güvenin huzur getirdiği bir olay örgüsü"]
+        case .dogruluk:
+            ["hikayenin ana değeri: doğruluk — gerçeği kırmadan paylaşma", "dürüst seçimler yapmanın güzelliği ve rahatlatıcılığı", "doğru sözün ödüllendirildiği nazik bir olay örgüsü"]
+        case .sevgi:
+            ["hikayenin ana değeri: sevgi — aile ve arkadaşlara sıcak ilgi gösterme", "şefkat ve paylaşmanın mutluluğu", "sevginin zorlukları aştığı bir olay örgüsü"]
+        case .caliskanlik:
+            ["hikayenin ana değeri: çalışkanlık — küçük adımlarla hedefe ulaşmanın güzelliği", "sabırla denemenin ve vazgeçmemenin ödüllendirilmesi", "merakla öğrenmenin maceraya dönüştüğü bir olay örgüsü"]
+        case .saygi:
+            ["hikayenin ana değeri: saygı — dinlemenin ve anlamaya çalışmanın önemi", "farklılıklara sıcak yaklaşmanın güzelliği", "nezaketin ve saygının kahramanı ödüllendirdiği bir olay örgüsü"]
+        case .comertlik:
+            ["hikayenin ana değeri: cömertlik — paylaşmanın ve iyilik etmenin güzelliği", "küçük jestlerin büyük mutluluk getirdiği bir olay örgüsü", "başkalarını düşünmenin kahramanı zenginleştirdiği bir hikaye"]
+        case .adalet:
+            ["hikayenin ana değeri: adalet — herkesin duygularını düşünme ve eşitlik", "kurallara uygun nazik çözümler bulmanın güzelliği", "adaletli davranmanın herkesi mutlu ettiği bir olay örgüsü"]
+        case .sorumluluk:
+            ["hikayenin ana değeri: sorumluluk — emanetlere iyi bakmanın önemi", "sözünü tutmanın güven inşa ettiği bir olay örgüsü", "küçük sorumlulukların büyük başarılara dönüştüğü bir hikaye"]
+        case .yardimseverlik:
+            ["hikayenin ana değeri: yardımseverlik — birine destek olmanın güzelliği", "dayanışma ve birlikte başarmanın mutluluğu", "küçük yardımların büyük fark yarattığı bir olay örgüsü"]
         }
     }
 
@@ -147,6 +264,8 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
         case .space, .robots: [.space]
         case .dreams, .princesKnight, .seasons: [.fairyTale]
         case .friendship, .music: [.magic, .fairyTale]
+        case .durustluk, .dogruluk, .sevgi, .caliskanlik, .saygi, .comertlik, .adalet, .sorumluluk, .yardimseverlik:
+            [.fairyTale]
         }
     }
 
@@ -199,16 +318,39 @@ enum StoryBentoTheme: String, CaseIterable, Identifiable, Sendable {
         return n.randomElement() ?? .adventure
     }
 
-    /// Richer hint generation: sometimes blends two themes for unexpected combinations.
+    /// Richer hint generation: blends scenario themes with value themes
+    /// for stories that have both an engaging setting and a meaningful lesson.
     static func generateHints(from selection: [StoryBentoTheme]) -> [String] {
         let n = normalizedSelection(selection)
+        let scenarios = n.filter { !$0.isValueTheme }
+        let values = n.filter { $0.isValueTheme }
+
+        if !scenarios.isEmpty, !values.isEmpty {
+            let scenario = scenarios.randomElement()!
+            let value = values.randomElement()!
+            let scenarioHint = scenario.apiThemeHints.randomElement()!
+            let valueHint = value.apiThemeHints.randomElement()!
+            if Bool.random() {
+                let extraScenario = scenario.apiThemeHints.filter { $0 != scenarioHint }.randomElement()
+                return [scenarioHint, valueHint] + (extraScenario.map { [$0] } ?? [])
+            }
+            return [scenarioHint, valueHint]
+        }
+
+        if values.count >= 2 {
+            let primary = values.randomElement()!
+            let others = values.filter { $0 != primary }
+            if let secondary = others.randomElement(), Int.random(in: 0..<10) < 4 {
+                return [primary.apiThemeHints.randomElement()!, secondary.apiThemeHints.randomElement()!]
+            }
+            return [primary.apiThemeHints.randomElement()!]
+        }
+
         let primary = n.randomElement() ?? .adventure
         if n.count >= 2, Int.random(in: 0..<10) < 3 {
             let others = n.filter { $0 != primary }
             if let secondary = others.randomElement() {
-                let primaryHint = primary.apiThemeHints.randomElement() ?? primary.apiThemeHints[0]
-                let secondaryHint = secondary.apiThemeHints.randomElement() ?? secondary.apiThemeHints[0]
-                return [primaryHint, secondaryHint]
+                return [primary.apiThemeHints.randomElement()!, secondary.apiThemeHints.randomElement()!]
             }
         }
         return primary.apiThemeHints

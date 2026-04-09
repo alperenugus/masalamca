@@ -141,8 +141,10 @@ struct StoryPlayerView: View {
         .task(id: activeStory.id) {
             StoryPreferences.mirrorPlaybackPreferencesToUserDefaults(for: activeStory.profile)
             audio.setPlaylist(playlist, currentID: activeStory.id)
-            if audio.currentStoryID == activeStory.id, audio.hasActiveTrack {
-                // Already playing this story — just sync local state, don't reload
+            let audioMatchesStory = audio.currentStoryID == activeStory.id
+                && audio.hasActiveTrack
+                && audio.nowPlayingTitle == activeStory.title
+            if audioMatchesStory {
                 loadedStoryID = activeStory.id
                 hasPlayableAudio = true
             } else if loadedStoryID != activeStory.id {
@@ -570,9 +572,8 @@ struct StoryPlayerView: View {
 
     @MainActor
     private func loadAudioIfNeeded() async {
-        audio.stop()
+        audio.stopCurrentPlayback()
         hasPlayableAudio = false
-        mixer.stopAll()
         appliedBackgroundMusicPreset = false
         do {
             if let blob = activeStory.audioBlob, !blob.isEmpty {

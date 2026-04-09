@@ -78,15 +78,6 @@ actor StoryService {
         }
         let payload = PromptOrchestrator.storyRequest(from: profile)
         storyReq.httpBody = try JSONEncoder().encode(payload)
-        // Long stories can take significantly longer due to token budget + retries on the proxy.
-        switch payload.targetLength {
-        case "long":
-            storyReq.timeoutInterval = 150
-        case "medium":
-            storyReq.timeoutInterval = 90
-        default:
-            storyReq.timeoutInterval = 60
-        }
 
         let (storyData, storyResp): (Data, URLResponse)
         do {
@@ -120,7 +111,7 @@ actor StoryService {
         }
         let dto = try JSONDecoder().decode(StoryGenerateResponseDTO.self, from: storyData)
         #if DEBUG
-        print("[StoryService] target_length=\(payload.targetLength ?? "nil") word_count=\(dto.wordCount ?? -1) model=\(dto.model ?? "unknown")")
+        print("[StoryService] word_count=\(dto.wordCount ?? -1) model=\(dto.model ?? "unknown")")
         #endif
 
         let audioData = try await fetchSpeechAudio(

@@ -341,17 +341,18 @@ struct WhiteNoisePlayerView: View {
     private func stepFocus(delta: Int) {
         let list = orderedPlaylist
         guard let idx = list.firstIndex(of: mixer.focusedSound) else { return }
-        let nextIdx = (idx + delta + list.count) % list.count
-        let next = list[nextIdx]
-        guard subscription.canUseSound(next) else {
-            showCommerceParentGate = true
-            return
-        }
-        let wasPlaying = focusedPlaying
-        mixer.focusedSound = next
-        if wasPlaying {
-            hintVolumeIfSilent()
-            mixer.solo(next)
+        for offset in 1..<list.count {
+            let candidateIdx = (idx + delta * offset + list.count * offset) % list.count
+            let candidate = list[candidateIdx]
+            if subscription.canUseSound(candidate) {
+                let wasPlaying = focusedPlaying
+                mixer.focusedSound = candidate
+                if wasPlaying {
+                    hintVolumeIfSilent()
+                    mixer.solo(candidate)
+                }
+                return
+            }
         }
     }
 }

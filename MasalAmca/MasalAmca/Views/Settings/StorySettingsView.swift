@@ -318,66 +318,11 @@ struct StorySettingsView: View {
                 .foregroundStyle(c.onSurfaceVariant.opacity(0.85))
                 .padding(.horizontal, DesignTokens.Spacing.sm)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignTokens.Spacing.sm) {
-                ForEach(StoryBentoTheme.allCases) { tile in
-                    let on = bentoSelection.contains(tile)
-                    let locked = tile.requiresPremium && !subscription.isPremium
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        if locked {
-                            showCommerceParentGate = true
-                            return
-                        }
-                        if on {
-                            if bentoSelection.count > 1 {
-                                bentoSelection = bentoSelection.subtracting([tile])
-                            }
-                        } else {
-                            bentoSelection = bentoSelection.union([tile])
-                        }
-                    } label: {
-                        ZStack(alignment: .topTrailing) {
-                            VStack(spacing: DesignTokens.Spacing.sm) {
-                                Image(systemName: tile.systemImage)
-                                    .font(.system(size: 26))
-                                    .foregroundStyle(on ? c.tertiary : c.secondary)
-                                HStack(spacing: 4) {
-                                    Text(tile.displayTitle)
-                                        .font(MasalFont.labelMedium())
-                                        .fontWeight(.bold)
-                                        .multilineTextAlignment(.center)
-                                        .foregroundStyle(on ? c.onSurface : c.secondary)
-                                    if tile.requiresPremium {
-                                        Image(systemName: "crown.fill")
-                                            .font(.caption2)
-                                            .foregroundStyle(c.tertiary)
-                                    }
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, DesignTokens.Spacing.md)
-                            if on {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(c.primary)
-                                    .padding(8)
-                            }
-                        }
-                        .background(
-                            RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
-                                .fill(on ? c.surfaceContainerHigh : c.surfaceContainerLow)
-                        )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
-                                .strokeBorder(on ? c.primary.opacity(0.35) : Color.clear, lineWidth: 1)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .opacity(on ? 1 : (locked ? 0.55 : 0.72))
-                    .accessibilityLabel(tile.displayTitle)
-                    .accessibilityAddTraits(on ? [.isSelected] : [])
-                }
-            }
+            ThemeCategoryPicker(
+                selection: $bentoSelection,
+                isPremium: subscription.isPremium,
+                showPremiumGate: { showCommerceParentGate = true }
+            )
         }
     }
 

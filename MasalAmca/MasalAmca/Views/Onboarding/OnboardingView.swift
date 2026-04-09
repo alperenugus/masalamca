@@ -177,59 +177,11 @@ struct OnboardingView: View {
                         .padding(.horizontal)
                 }
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignTokens.Spacing.sm) {
-                    ForEach(StoryBentoTheme.allCases) { tile in
-                        let on = selectedBentos.contains(tile)
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            if on {
-                                if selectedBentos.count > 1 {
-                                    selectedBentos = selectedBentos.subtracting([tile])
-                                }
-                            } else {
-                                selectedBentos = selectedBentos.union([tile])
-                            }
-                        } label: {
-                            ZStack(alignment: .topTrailing) {
-                                VStack(spacing: DesignTokens.Spacing.sm) {
-                                    Image(systemName: tile.systemImage)
-                                        .font(.system(size: 26))
-                                        .foregroundStyle(on ? c.tertiary : c.secondary)
-                                    HStack(spacing: 4) {
-                                        Text(tile.displayTitle)
-                                            .font(MasalFont.labelMedium())
-                                            .fontWeight(.bold)
-                                            .multilineTextAlignment(.center)
-                                            .foregroundStyle(on ? c.onSurface : c.secondary)
-                                        if tile.requiresPremium {
-                                            Image(systemName: "crown.fill")
-                                                .font(.caption2)
-                                                .foregroundStyle(c.tertiary)
-                                        }
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, DesignTokens.Spacing.md)
-                                if on {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.caption)
-                                        .foregroundStyle(c.primary)
-                                        .padding(8)
-                                }
-                            }
-                            .background(
-                                RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
-                                    .fill(on ? c.surfaceContainerHigh : c.surfaceContainerLow)
-                            )
-                            .overlay {
-                                RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
-                                    .strokeBorder(on ? c.primary.opacity(0.35) : Color.clear, lineWidth: 1)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .opacity(on ? 1 : 0.72)
-                    }
-                }
+                ThemeCategoryPicker(
+                    selection: $selectedBentos,
+                    isPremium: subscription.isPremium,
+                    showPremiumGate: nil
+                )
                 .padding(.horizontal, DesignTokens.Spacing.lg)
 
                 GradientButton("Devam Et") {
@@ -272,7 +224,7 @@ struct OnboardingView: View {
                             "2 masal (toplam)",
                             "3 beyaz gürültü",
                             "2 anlatıcı ses",
-                            "6 hikaye teması"
+                            "9 hikaye teması"
                         ],
                         isPremium: false
                     )
@@ -284,7 +236,7 @@ struct OnboardingView: View {
                             "Günde 2 yeni masal",
                             "6 beyaz gürültü",
                             "8 anlatıcı ses",
-                            "15 hikaye teması",
+                            "24 hikaye teması",
                             "Arka plan müziği"
                         ],
                         isPremium: true
