@@ -56,9 +56,18 @@ private struct ProxyErrorDTO: Codable {
 
 actor StoryService {
     private let session: URLSession
+    private static let clientVersion = "2"
 
     init(session: URLSession = .shared) {
         self.session = session
+    }
+
+    private func setCommonHeaders(on request: inout URLRequest, authToken: String) {
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Self.clientVersion, forHTTPHeaderField: "X-Client-Version")
+        if !authToken.isEmpty {
+            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        }
     }
 
     func generateStoryAndAudio(
@@ -72,10 +81,7 @@ actor StoryService {
         var storyReq = URLRequest(url: storyURL)
         storyReq.httpMethod = "POST"
         storyReq.timeoutInterval = 60
-        storyReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if !authToken.isEmpty {
-            storyReq.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
-        }
+        setCommonHeaders(on: &storyReq, authToken: authToken)
         let payload = PromptOrchestrator.storyRequest(from: profile)
         storyReq.httpBody = try JSONEncoder().encode(payload)
 
@@ -151,13 +157,10 @@ actor StoryService {
         let ttsURL = base.appendingPathComponent("v1").appendingPathComponent("tts")
         var ttsReq = URLRequest(url: ttsURL)
         ttsReq.httpMethod = "POST"
-        // Long Turkish stories (many minutes of audio) need far more than 90s end-to-end (proxy + ElevenLabs).
+        // Long Turkish stories (many minutes of audio) need far more than 90s end-to-end (proxy + TTS).
         let wordEstimate = max(1, text.split(whereSeparator: \.isWhitespace).count)
         ttsReq.timeoutInterval = min(300, max(120, Double(wordEstimate) * 0.35))
-        ttsReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if !authToken.isEmpty {
-            ttsReq.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
-        }
+        setCommonHeaders(on: &ttsReq, authToken: authToken)
         let ttsBody = TTSRequestDTO(text: text, voiceID: voiceID, outputFormat: "mp3_44100_128")
         ttsReq.httpBody = try JSONEncoder().encode(ttsBody)
 

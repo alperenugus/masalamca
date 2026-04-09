@@ -10,15 +10,14 @@ enum BundledNarrationResources {
     private static let searchSubdirectories = ["Resources/Audio", "Audio"]
 
     static func audioFileURL(for narrator: NarratorChoice) -> URL? {
-        // Convention: each narrator preview is bundled as `{voice_id}.mp3`.
-        let voiceID = narrator.resolvedVoiceID() ?? NarratorChoice.defaultFemaleVoiceID()
-        if voiceID != "default" {
+        let base = narrator.voiceName
+        for ext in ["wav", "mp3"] {
             for sub in searchSubdirectories {
-                if let u = Bundle.main.url(forResource: voiceID, withExtension: "mp3", subdirectory: sub) {
+                if let u = Bundle.main.url(forResource: base, withExtension: ext, subdirectory: sub) {
                     return u
                 }
             }
-            if let u = Bundle.main.url(forResource: voiceID, withExtension: "mp3") {
+            if let u = Bundle.main.url(forResource: base, withExtension: ext) {
                 return u
             }
         }

@@ -40,10 +40,17 @@ pnpm-debug.log*
 !.env.example
 .dev.vars
 
+# Google Cloud service account keys (never commit)
+*credentials*.json
+*service-account*.json
+
 # Cloudflare Wrangler
 .wrangler/
 
 # JetBrains / other IDEs
 .idea/
+
+# E2E test output (generated audio/JSON)
+e2e-testing/output/
 
 *.log

@@ -1,22 +1,35 @@
 /**
- * Masal Amca — pure proxy for OpenAI + ElevenLabs TTS.
+ * Masal Amca — pure proxy for OpenAI + TTS.
  *
  * The iOS app builds the complete prompt (system + user messages).
  * This worker only handles auth, rate limiting, and forwarding.
  *
- * Secrets: OPENAI_API_KEY, ELEVENLABS_API_KEY, PROXY_AUTH_TOKEN, ELEVENLABS_VOICE_ID (optional default)
+ * Client versioning: the iOS app sends `X-Client-Version: 2` (or higher)
+ * to use Google Gemini TTS. Old clients without the header (or version < 2)
+ * fall back to ElevenLabs. This lets us deploy one worker that serves both
+ * the current production app and future releases.
+ *
+ * Secrets: OPENAI_API_KEY, PROXY_AUTH_TOKEN,
+ *   GOOGLE_SERVICE_ACCOUNT_JSON (for Gemini TTS, version >= 2),
+ *   ELEVENLABS_API_KEY (legacy, version < 2)
  * Rate limiting: Cloudflare Workers Rate Limit binding (wrangler.toml [[ratelimits]]).
  */
 
+import { getGoogleAccessToken } from "./googleAuth";
+
 export interface Env {
   OPENAI_API_KEY: string;
-  ELEVENLABS_API_KEY: string;
+  /** Legacy: ElevenLabs key for old clients (X-Client-Version < 2). */
+  ELEVENLABS_API_KEY?: string;
   ELEVENLABS_VOICE_ID?: string;
+  /** Google service account JSON for Gemini TTS (X-Client-Version >= 2). */
+  GOOGLE_SERVICE_ACCOUNT_JSON?: string;
   PROXY_AUTH_TOKEN?: string;
   API_RATE_LIMITER: RateLimit;
+  /** Gemini-TTS fallback speaker when client sends voice_id=default. */
+  GOOGLE_TTS_VOICE_NAME?: string;
 }
 
-// iOS sends the full messages array — the worker just forwards it.
 interface StoryRequest {
   messages: { role: string; content: string }[];
 }
@@ -24,10 +37,40 @@ interface StoryRequest {
 interface TTSRequest {
   text: string;
   voice_id: string;
-  output_format: string;
+  output_format?: string;
 }
 
+// ─── Constants ───────────────────────────────────────────────────────
+
 const ELEVEN_TTS_MODEL = "eleven_flash_v2_5";
+const GOOGLE_TTS_LANG = "tr-TR";
+const GEMINI_TTS_MODEL = "gemini-2.5-flash-tts";
+
+/**
+ * Minimum client version that uses Google Gemini TTS.
+ * Clients below this version use ElevenLabs (legacy).
+ */
+const MIN_GEMINI_VERSION = 2;
+
+const GEMINI_TTS_STYLE_PROMPT = `Read the following text as a comforting, wise, and engaging storyteller for children. Your voice should be incredibly warm, gentle, and deeply soothing. Speak with a patient, melodic tone, as if reading a bedtime story to help a child feel completely safe and relaxed.
+
+Keep the pacing slow and deliberate. Use natural, hushed pauses to build a sense of gentle wonder. When emphasizing descriptive words, do it with warmth and a subtle smile in your voice rather than dramatic volume. The overall emotion must be pure coziness, safety, and affectionate care.
+
+The entire passage is a story in Turkish (Türkçe). Read it from start to finish as continuous narration only. Do not speak any English, stage directions, or meta-instructions — there should be none in the text; if you ever see English words, skip them and continue with the Turkish story.`;
+
+// ─── Utilities ───────────────────────────────────────────────────────
+
+function clientVersion(request: Request): number {
+  const raw = request.headers.get("X-Client-Version") ?? "1";
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : 1;
+}
+
+function resolveGeminiVoice(voiceId: string | undefined, env: Env): string {
+  const id = (voiceId ?? "").trim();
+  if (id && id !== "default") return id;
+  return env.GOOGLE_TTS_VOICE_NAME?.trim() || "Achernar";
+}
 
 function wordCount(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;
@@ -95,12 +138,21 @@ async function enforceRateLimit(
   );
 }
 
+function jsonResponse(data: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 // ─── Router ──────────────────────────────────────────────────────────
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    console.log(`[req] ${request.method} ${url.pathname}`);
+    const ver = clientVersion(request);
+    console.log(`[req] ${request.method} ${url.pathname} client_v=${ver}`);
+
     if (!authOk(request, env)) {
       return new Response("Unauthorized", { status: 401 });
     }
@@ -113,7 +165,7 @@ export default {
     if (request.method === "POST" && url.pathname.endsWith("/v1/tts")) {
       const limited = await enforceRateLimit(env, request);
       if (limited) return limited;
-      return handleTTS(request, env);
+      return handleTTS(request, env, ver);
     }
     return new Response("Masal Amca proxy", { status: 200 });
   },
@@ -153,7 +205,7 @@ async function handleStory(request: Request, env: Env): Promise<Response> {
           response_format: { type: "json_object" },
           messages: body.messages,
           temperature: 0.9,
-          max_tokens: 2500,
+          max_tokens: 6000,
         }),
       },
       60_000,
@@ -182,7 +234,6 @@ async function handleStory(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: "parse", raw: raw.slice(0, 500) }, 502);
   }
 
-  // body may be a string or an array of paragraphs — normalize to string
   let storyBody: string;
   if (Array.isArray(parsed.body)) {
     storyBody = parsed.body.join("\n\n");
@@ -205,14 +256,148 @@ async function handleStory(request: Request, env: Env): Promise<Response> {
   });
 }
 
-// ─── TTS (pure proxy to ElevenLabs) ─────────────────────────────────
+// ─── TTS Router ─────────────────────────────────────────────────────
 
-async function handleTTS(request: Request, env: Env): Promise<Response> {
+async function handleTTS(
+  request: Request,
+  env: Env,
+  ver: number,
+): Promise<Response> {
   let body: TTSRequest;
   try {
     body = (await request.json()) as TTSRequest;
   } catch {
-    return new Response("invalid_json", { status: 400 });
+    return jsonResponse({ error: "invalid_json" }, 400);
+  }
+
+  if (!body.text?.trim()) {
+    return jsonResponse({ error: "missing_text" }, 400);
+  }
+
+  if (ver >= MIN_GEMINI_VERSION) {
+    return handleTTSGemini(body, env);
+  }
+  return handleTTSElevenLabs(body, env);
+}
+
+// ─── TTS: Google Gemini Flash TTS (version >= 2) ────────────────────
+
+async function handleTTSGemini(
+  body: TTSRequest,
+  env: Env,
+): Promise<Response> {
+  if (!env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()) {
+    return jsonResponse(
+      { error: "google_tts_not_configured", message: "GOOGLE_SERVICE_ACCOUNT_JSON eksik." },
+      500,
+    );
+  }
+
+  const speakerName = resolveGeminiVoice(body.voice_id, env);
+
+  let accessToken: string;
+  let projectId: string;
+  try {
+    const tok = await getGoogleAccessToken(env.GOOGLE_SERVICE_ACCOUNT_JSON);
+    accessToken = tok.accessToken;
+    projectId = tok.projectId;
+  } catch (err) {
+    const msg = (err as Error).message ?? "google_auth_error";
+    console.log(`[tts gemini] auth failed: ${msg}`);
+    return jsonResponse(
+      {
+        error: "google_auth_failed",
+        message: "Google kimlik doğrulaması başarısız.",
+        detail: msg.slice(0, 500),
+      },
+      502,
+    );
+  }
+
+  const synthBody = {
+    input: {
+      text: body.text,
+      prompt: GEMINI_TTS_STYLE_PROMPT,
+    },
+    voice: {
+      languageCode: GOOGLE_TTS_LANG,
+      name: speakerName,
+      model_name: GEMINI_TTS_MODEL,
+    },
+    audioConfig: {
+      audioEncoding: "MP3",
+      sampleRateHertz: 24000,
+    },
+  };
+
+  let gRes: Response;
+  try {
+    gRes = await fetchWithTimeout(
+      "https://texttospeech.googleapis.com/v1/text:synthesize",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          "x-goog-user-project": projectId,
+        },
+        body: JSON.stringify(synthBody),
+      },
+      180_000,
+      "google_tts",
+    );
+  } catch (err) {
+    const msg = (err as Error).message ?? "google_tts_fetch_error";
+    return jsonResponse({ error: msg }, 504);
+  }
+
+  const raw = await gRes.text();
+  if (!gRes.ok) {
+    console.log(`[tts gemini] ${gRes.status} ${raw.slice(0, 600)}`);
+    return jsonResponse(
+      {
+        error: "tts_failed",
+        message: "Seslendirme şu anda yapılamadı. Lütfen tekrar dene.",
+        detail: raw.slice(0, 800),
+      },
+      gRes.status >= 400 && gRes.status < 600 ? gRes.status : 502,
+    );
+  }
+
+  let parsed: { audioContent?: string };
+  try {
+    parsed = JSON.parse(raw) as { audioContent?: string };
+  } catch {
+    return jsonResponse({ error: "google_tts_bad_json", detail: raw.slice(0, 200) }, 502);
+  }
+
+  if (!parsed.audioContent) {
+    return jsonResponse({ error: "google_tts_empty_audio" }, 502);
+  }
+
+  let binary: Uint8Array;
+  try {
+    binary = Uint8Array.from(atob(parsed.audioContent), (c) => c.charCodeAt(0));
+  } catch {
+    return jsonResponse({ error: "google_tts_base64_decode_failed" }, 502);
+  }
+
+  return new Response(binary, {
+    headers: { "Content-Type": "audio/mpeg" },
+  });
+}
+
+// ─── TTS: ElevenLabs (legacy, version < 2) ──────────────────────────
+
+async function handleTTSElevenLabs(
+  body: TTSRequest,
+  env: Env,
+): Promise<Response> {
+  if (!env.ELEVENLABS_API_KEY?.trim()) {
+    return jsonResponse(
+      { error: "elevenlabs_not_configured", message: "ELEVENLABS_API_KEY eksik." },
+      500,
+    );
   }
 
   const voice =
@@ -228,7 +413,7 @@ async function handleTTS(request: Request, env: Env): Promise<Response> {
       {
         method: "POST",
         headers: {
-          "xi-api-key": env.ELEVENLABS_API_KEY,
+          "xi-api-key": env.ELEVENLABS_API_KEY!,
           "Content-Type": "application/json",
           Accept: "audio/mpeg",
         },
@@ -267,7 +452,7 @@ async function handleTTS(request: Request, env: Env): Promise<Response> {
         );
       }
     } catch {
-      // JSON parse failure — fall through
+      // fall through
     }
     return jsonResponse(
       {
@@ -281,14 +466,5 @@ async function handleTTS(request: Request, env: Env): Promise<Response> {
 
   return new Response(elevenRes.body, {
     headers: { "Content-Type": "audio/mpeg" },
-  });
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────
-
-function jsonResponse(data: Record<string, unknown>, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json" },
   });
 }

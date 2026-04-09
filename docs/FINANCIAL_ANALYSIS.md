@@ -153,4 +153,7 @@ Each free user gets 2 stories lifetime:
 | **Net profit**                   | **+$148.50/mo** |
 | **Annual profit**                | **+$1,782/yr**  |
 
+## See also
+
+- **[TTS_ALTERNATIVES_REPORT.md](TTS_ALTERNATIVES_REPORT.md)** — Comparison of non–ElevenLabs TTS options (Turkish, custom voices, relative economics).
 

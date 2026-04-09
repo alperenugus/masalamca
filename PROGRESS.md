@@ -6,7 +6,7 @@
 - **Pure proxy architecture**: Worker rewritten as stateless proxy. All prompt logic (system prompt, theme selection, seed randomization) moved to iOS app (`PromptOrchestrator`, `StorySeeds`).
 - **Theme category system**: 24 themes organized into 5 categories (`StoryThemeCategory`) — Macera & Keşif, Doğa & Hayvanlar, Hayal Dünyası, Günlük Hayat, Değerler Eğitimi. `ThemeCategoryPicker` accordion component reused in Onboarding and Story Settings.
 - **Expanded content variety**: 41 randomized places, 40 side characters in `StorySeeds.swift`. One theme randomly selected per generation.
-- **TTS model**: Switched to ElevenLabs Flash v2.5 (`eleven_flash_v2_5`) — 50% cost savings over Multilingual v2 with acceptable Turkish quality.
+- **TTS model**: Migrated from ElevenLabs Flash v2.5 to **Google Gemini Flash TTS** (`gemini-2.5-flash-tts`) — ~75% cost reduction with style-prompted narration and Turkish GA support.
 - **Messages-based API**: iOS sends `{ messages: [system, user] }` to Worker; Worker forwards to OpenAI and joins `body[]` array into string.
 
 ### Bug fixes

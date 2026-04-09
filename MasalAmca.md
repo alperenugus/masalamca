@@ -11,7 +11,7 @@ Masal Amca generates safe, unique Turkish bedtime stories tailored to each child
 ### Story Generation
 - **Personalized AI stories**: Each story features the child as the hero, with age-appropriate language and themes
 - **24 themes in 5 categories**: Macera & Keşif, Doğa & Hayvanlar, Hayal Dünyası, Günlük Hayat, Değerler Eğitimi
-- **8 AI narrator voices** via ElevenLabs (2 free, 6 premium)
+- **8 AI narrator voices** via Google Gemini Flash TTS (2 free, 6 premium)
 - **Content safety**: Strict prompt guardrails — no violence, fear, death, or inappropriate content
 - **Variety engine**: 41 randomized places, 40 side characters, plus theme-based hints ensure no two stories are alike
 
@@ -50,8 +50,8 @@ iOS App                          Cloudflare Worker              Providers
 └────────┬────────┘             └──────┬───────┘             └──────────┘
          │                             │
          │                             │                      ┌──────────┐
-         │──text+voice_id─────────────▶│──────forward────────▶│ElevenLabs│
-         │                             │                      │Flash v2.5│
+         │──text+voice_id─────────────▶│──────forward────────▶│ Google   │
+         │                             │                      │Gemini TTS│
          │◀────────audio/mpeg──────────│◀─────audio/mpeg──────│          │
          │                             │                      └──────────┘
 ```
@@ -64,7 +64,7 @@ The iOS app owns ALL prompt logic (system prompt, theme selection, seed randomiz
 |-------|-----------|
 | Frontend | SwiftUI + SwiftData, iOS 17+ |
 | Story text | OpenAI GPT-4o-mini |
-| Story audio | ElevenLabs Flash v2.5 (Turkish) |
+| Story audio | Google Gemini Flash TTS (Turkish, `gemini-2.5-flash-tts`) |
 | Proxy | Cloudflare Workers + rate limiting |
 | Subscriptions | StoreKit 2 (Apple) |
 | Data sync | SwiftData (local-first, optional CloudKit) |
@@ -74,8 +74,8 @@ The iOS app owns ALL prompt logic (system prompt, theme selection, seed randomiz
 - **Revenue**: App Store subscriptions ($9.99/mo, $99.99/yr)
 - **Apple commission**: 15% (Small Business Program)
 - **Net revenue**: $8.49/mo (monthly), $7.08/mo (yearly)
-- **Primary cost**: ElevenLabs TTS (~$0.42/story on Flash v2.5 Pro plan overage)
-- **Break-even**: ~20 stories/user/month on Flash v2.5
+- **Primary cost**: Google Gemini Flash TTS (~$0.10–0.12/story)
+- **Break-even**: Substantially lower with ~75% TTS cost reduction vs previous ElevenLabs stack
 - **Target**: 50+ paying subscribers for sustainable profitability
 
 See [docs/FINANCIAL_ANALYSIS.md](docs/FINANCIAL_ANALYSIS.md) for detailed cost modeling and break-even analysis.

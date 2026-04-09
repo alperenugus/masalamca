@@ -13,4 +13,6 @@ namespace_id = "1001"
   period = 60
 
 [vars]
-# Set real secrets with: wrangler secret put OPENAI_API_KEY
+# Secrets via: wrangler secret put <NAME>
+# Required: OPENAI_API_KEY, PROXY_AUTH_TOKEN, GOOGLE_SERVICE_ACCOUNT_JSON
+# Legacy (keep for old app versions): ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID

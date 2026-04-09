@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Masal Amca is a Turkish bedtime story app for children. It generates personalized stories using AI (OpenAI GPT-4o-mini) and narrates them with ElevenLabs Flash v2.5 TTS. A Cloudflare Worker acts as a pure proxy (auth + rate limiting). The app also provides white noise playback for sleep.
+Masal Amca is a Turkish bedtime story app for children. It generates personalized stories using AI (OpenAI GPT-4o-mini) and narrates them with Google Gemini Flash TTS. A Cloudflare Worker acts as a pure proxy (auth + rate limiting). The app also provides white noise playback for sleep.
 
 - **Platform:** iOS 17+, iPhone and iPad
 - **Language:** Swift 5, SwiftUI, SwiftData
@@ -72,7 +72,7 @@ Masal Amca is a Turkish bedtime story app for children. It generates personalize
 ```
 iOS (PromptOrchestrator)           Worker (pure proxy)           Providers
 ├── Pick 1 random theme            ├── Validate messages          ├── OpenAI GPT-4o-mini
-├── Pick 1-2 random places         ├── Forward to OpenAI          ├── ElevenLabs Flash v2.5
+├── Pick 1-2 random places         ├── Forward to OpenAI          ├── Google Gemini Flash TTS
 ├── Pick 1-2 random characters     ├── Join body[] → string       │
 ├── Build system prompt            ├── Return {title,body,genre}  │
 ├── Build user message             │                              │

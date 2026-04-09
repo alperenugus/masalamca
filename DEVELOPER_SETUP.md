@@ -59,14 +59,13 @@ The Worker is a **pure proxy** — it does NOT build prompts or hold story logic
 
 2. **Provider API keys (never in the iOS app)**
    - **OpenAI**: API key with billing enabled (GPT-4o-mini)
-   - **ElevenLabs**: API key + Turkish voice IDs (Flash v2.5 model)
+   - **Google Cloud**: Service account JSON with Cloud Text-to-Speech API enabled
 
 3. **Worker secrets**
    ```bash
    wrangler secret put OPENAI_API_KEY
-   wrangler secret put ELEVENLABS_API_KEY
    wrangler secret put PROXY_AUTH_TOKEN
-   wrangler secret put ELEVENLABS_VOICE_ID
+   wrangler secret put GOOGLE_SERVICE_ACCOUNT_JSON
    ```
 
 4. **Deploy**
@@ -82,7 +81,7 @@ The Worker is a **pure proxy** — it does NOT build prompts or hold story logic
    - `StorySeeds.swift` — 41 places, 40 side characters, randomized per request
    - `StoryPreferences.swift` — 24 themes in 5 categories via `StoryThemeCategory`
 
-   TTS uses **ElevenLabs Flash v2.5** (`eleven_flash_v2_5`).
+   TTS uses **Google Gemini Flash TTS** (`gemini-2.5-flash-tts`) via the Cloud Text-to-Speech API.
 
 ---
 
@@ -92,7 +91,6 @@ The Worker is a **pure proxy** — it does NOT build prompts or hold story logic
 |-----|---------|
 | `ProxyBaseURL` | HTTPS base URL of deployed Worker |
 | `ProxyAuthToken` | Shared secret with Worker |
-| `ElevenLabsVoiceID` | Default voice UUID for TTS |
 | `TermsOfUseURL` | EULA link for paywall |
 | `PrivacyPolicyURL` | Privacy policy link for paywall |
 

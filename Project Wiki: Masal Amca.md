@@ -19,7 +19,7 @@
 | **iOS app** | SwiftUI + SwiftData, iOS 17+ | UI, audio playback, prompt building, local storage |
 | **Edge proxy** | Cloudflare Workers | Stateless proxy holding API keys, auth + rate limiting |
 | **Story text** | OpenAI GPT-4o-mini | Generates personalized Turkish story in JSON format |
-| **Story audio** | ElevenLabs Flash v2.5 | TTS narration with Turkish voice models |
+| **Story audio** | Google Gemini Flash TTS (`gemini-2.5-flash-tts`) | TTS narration with Turkish voice models |
 | **Subscriptions** | StoreKit 2 | Monthly/yearly auto-renewable via Apple |
 | **Data sync** | SwiftData (local-first) | Optional CloudKit for cross-device sync |
 
@@ -39,7 +39,7 @@
 - Age-appropriate language calibration (2–4, 5–7, 8+)
 
 ### Audio & Sleep
-- 8 AI narrator voices (2 free, 6 premium) via ElevenLabs
+- 8 AI narrator voices (2 free, 6 premium) via Google Gemini Flash TTS
 - 6 white noise sounds: rain, ocean, wind, fireplace, shush, fan
 - Background playback with lock screen Now Playing controls
 - Mini player bar for persistent audio access
@@ -56,7 +56,7 @@
 
 **Global context:** Apps like Oscar and Bedtime AI prove demand for personalized AI stories. Sleep apps like White Noise Baby have massive downloads for audio loops.
 
-**Turkish market gap:** Existing Turkish apps (Masalcı etc.) offer static, pre-recorded audio. No dominant local app combines AI personalization + ElevenLabs-quality Turkish narration + white noise mixer in one iOS experience.
+**Turkish market gap:** Existing Turkish apps (Masalcı etc.) offer static, pre-recorded audio. No dominant local app combines AI personalization + high-quality Turkish narration + white noise mixer in one iOS experience.
 
 **Differentiators:**
 - Zero screen time (audio-only consumption)
@@ -80,23 +80,16 @@ Revenue after Apple 15% commission: $8.49/mo (monthly), $7.08/mo (yearly).
 
 ## 6. Financial Model
 
-### Per-Story Cost (Flash v2.5)
+### Per-Story Cost (Gemini Flash TTS)
 - OpenAI: ~$0.001
-- ElevenLabs: ~$0.42
-- **Total: ~$0.42/story**
+- Google Gemini Flash TTS: ~$0.10–0.12
+- **Total: ~$0.10–0.12/story**
 
 ### Break-Even
-- Per-user: ~20 stories/month to stay profitable on Pro plan
-- Subscriber count: ~13 subscribers on Pro plan, ~35 on Scale yearly
+- Per-user: substantially more headroom than previous ElevenLabs stack (~75% TTS cost reduction)
+- Subscriber count: much lower break-even due to reduced COGS
 
-### Recommended Plan Progression
-| Subscribers | ElevenLabs Plan |
-|-------------|----------------|
-| 0–34 | Pro ($99/mo) |
-| 35–50+ | Scale yearly ($275/mo) |
-| 100+ | Scale or Business |
-
-### Projection (50 subscribers, average usage, Scale yearly)
+### Projection (50 subscribers, average usage)
 - Revenue: $424.50/mo
 - Costs: $276/mo
 - **Net profit: ~$148.50/mo ($1,782/yr)**

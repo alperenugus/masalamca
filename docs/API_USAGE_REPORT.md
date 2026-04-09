@@ -9,19 +9,17 @@ Bu belge, uygulamanın **dış API'lere** nasıl bağlandığını, hangi **mode
 | Katman | Rol |
 |--------|-----|
 | **iOS uygulaması** | SwiftUI + SwiftData. `PromptOrchestrator` tüm prompt mantığını (system + user mesajları) hazırlar. `StorySeeds` rastgele mekan ve karakter seçer. `StoryService` ile yalnızca Cloudflare Worker proxy'ye bağlanır. API anahtarları uygulamada **tutulmaz**. |
-| **Edge proxy** (`edge/src/index.ts`) | Saf proxy: iOS'tan gelen `messages[]` dizisini OpenAI'ye iletir. `body[]` dizisini string'e dönüştürür. TTS isteğini ElevenLabs'e iletir. Bearer token ile korunur. Rate limiting uygulanır. Prompt mantığı **yoktur**. |
-| **OpenAI** | Masal metni (JSON): `gpt-4o-mini`, `response_format: json_object`, `temperature: 0.7` |
-| **ElevenLabs** | Masal sesli anlatımı (MP3): `eleven_flash_v2_5`, Türkçe (`language_code: tr`) |
+| **Edge proxy** (`edge/src/index.ts`) | Saf proxy: iOS'tan gelen `messages[]` dizisini OpenAI'ye iletir. `body[]` dizisini string'e dönüştürür. TTS isteğini Google Gemini Flash TTS'e iletir. Bearer token ile korunur. Rate limiting uygulanır. Prompt mantığı **yoktur**. |
+| **OpenAI** | Masal metni (JSON): `gpt-4o-mini`, `response_format: json_object`, `temperature: 0.9` |
+| **Google Gemini Flash TTS** | Masal sesli anlatımı (MP3): `gemini-2.5-flash-tts`, Türkçe (`tr-TR`), stil promptu ile |
 
 ---
 
-## 2. ElevenLabs paneli: TTS ile müzik üretimini karıştırmayın
+## 2. Google Gemini Flash TTS
 
-ElevenLabs panelindeki toplam "Credit Usage" rakamı, hesaptaki **tüm** ürünleri (TTS, müzik, vb.) kapsar. Masal Amca yalnızca **Text to Speech** hattını kullanır. Beyaz gürültü döngüleri yerel (bundle) dosyalardır — ElevenLabs çağrılmaz.
+Uygulama, **Gemini 2.5 Flash TTS** modelini Cloud Text-to-Speech API üzerinden kullanır. Her anlatıcı, bir Gemini konuşmacı ismine karşılık gelir (ör. `Achernar`, `Algieba`). iOS uygulaması seçilen konuşmacı ismini doğrudan `voice_id` olarak gönderir.
 
-Maliyet analizi için panelde **yalnızca TTS satırını** filtreleyin.
-
-**Aktif model:** `eleven_flash_v2_5` (Flash v2.5) — Multilingual v2'ye göre ~%50 daha düşük birim maliyet. Türkçe uzun anlatım kalitesi yetersiz kalırsa `eleven_multilingual_v2`'ye dönüş değerlendirilebilir.
+**Stil promptu:** Worker, her TTS isteğinde İngilizce bir stil promptu ekler. Bu prompt, sesi sıcak, sakin ve masal anlatıcısına uygun şekilde yönlendirir.
 
 ---
 
@@ -35,7 +33,7 @@ Maliyet analizi için panelde **yalnızca TTS satırını** filtreleyin.
 | **Upstream** | `https://api.openai.com/v1/chat/completions` |
 | **Model** | `gpt-4o-mini` |
 | **Çıktı formatı** | `response_format: { type: "json_object" }` |
-| **Sıcaklık** | `0.7` |
+| **Sıcaklık** | `0.9` |
 
 **İstek gövdesi (uygulama → proxy):**
 
@@ -49,7 +47,7 @@ Maliyet analizi için panelde **yalnızca TTS satırını** filtreleyin.
 ```
 
 `PromptOrchestrator` (iOS) bu mesajları hazırlar:
-- **System prompt**: Güvenlik kuralları, TTS optimizasyonu, JSON formatı, çeşitlilik direktifleri
+- **System prompt**: Güvenlik kuralları, metin optimizasyonu, JSON formatı, çeşitlilik direktifleri
 - **User message**: Çocuğun adı, yaş grubu, seçilen tema (1 adet), rastgele mekanlar (1-2), rastgele yan karakterler (1-2)
 
 **İçerik çeşitlilik motoru (`StorySeeds.swift`):**
@@ -58,21 +56,21 @@ Maliyet analizi için panelde **yalnızca TTS satırını** filtreleyin.
 - Her istek için `shuffled().prefix()` ile benzersiz seçim
 
 **Yanıt (proxy → uygulama):** `{ title, body, genre, word_count, model }`
-- `body` alanı OpenAI'den paragraf dizisi (`string[]`) olarak gelir, Worker `\n\n` ile birleştirir.
+- `body` alanı OpenAI'den string veya paragraf dizisi olarak gelebilir; Worker her iki durumu da destekler.
 
-### 3.2 `POST /v1/tts` (ElevenLabs)
+### 3.2 `POST /v1/tts` (Google Gemini Flash TTS)
 
 | Alan | Değer |
 |------|--------|
 | **HTTP** | `POST`, gövde JSON |
-| **Upstream** | `https://api.elevenlabs.io/v1/text-to-speech/{voice_id}` |
-| **TTS modeli** | `eleven_flash_v2_5` |
-| **Dil** | `language_code: tr` |
-| **Ses** | İstekteki `voice_id`; boşsa Worker ortamındaki `ELEVENLABS_VOICE_ID` |
+| **Upstream** | `https://texttospeech.googleapis.com/v1/text:synthesize` |
+| **TTS modeli** | `gemini-2.5-flash-tts` |
+| **Dil** | `tr-TR` |
+| **Ses** | İstekteki `voice_id` (Gemini konuşmacı ismi, ör. `Achernar`) |
 
-**İstek gövdesi:** `{ text, voice_id, output_format }` (uygulama: `mp3_44100_128`)
+**İstek gövdesi:** `{ text, voice_id, output_format }`
 
-**Yanıt:** `audio/mpeg` (ikili gövde)
+**Yanıt:** `audio/mpeg` (ikili gövde — base64'ten çözülmüş MP3)
 
 ---
 
@@ -84,9 +82,9 @@ iOS tarafında oluşturulur. Kurallar:
 - Türkçe, çocuk uyku masalı
 - Şiddet, korku, yaralanma, ölüm **yasak**
 - Çocuk kahraman, yaşa uygun kelime hazinesi
-- ElevenLabs TTS optimizasyonu (noktalama, duraklar, tırnak, abartısız ünlem)
+- Düz metin, sahne yönergesi yok — seslendirme katmanı ayrı
 - Çeşitlilik: aynı temada bile farklı olay örgüsü, klişe son yok
-- JSON çıktısı: `{ "title": "...", "body": ["paragraf1", "paragraf2", ...] }`
+- JSON çıktısı: `{ "title": "...", "body": "...", "genre": "calming|adventure|educational" }`
 
 ### 4.2 User message (`PromptOrchestrator.buildUserMessage()`)
 
@@ -120,7 +118,7 @@ Her masal üretiminde kullanıcının seçili temalarından **yalnızca 1 tanesi
 
 | Önlem | Açıklama |
 |--------|-----------|
-| **Anahtarlar cihazda değil** | OpenAI ve ElevenLabs anahtarları yalnızca Worker ortamında (Wrangler secrets) |
+| **Anahtarlar cihazda değil** | OpenAI ve Google SA anahtarları yalnızca Worker ortamında (Wrangler secrets) |
 | **Proxy auth** | `PROXY_AUTH_TOKEN` ayarlıysa `Authorization: Bearer …` zorunlu; aksi halde 401 |
 | **Rate limiting** | Workers binding ile IP bazlı, 40 req/60s per PoP |
 | **İçerik kuralları** | System prompt'ta şiddet/korku/ölüm yasak, JSON şeması zorunlu |
@@ -130,30 +128,21 @@ Her masal üretiminde kullanıcının seçili temalarından **yalnızca 1 tanesi
 
 ## 7. Finansal çerçeve
 
-### Masal başına maliyet (Flash v2.5, Pro plan)
+### Masal başına maliyet (Gemini Flash TTS)
 
 | Bileşen | Maliyet |
 |---------|---------|
 | OpenAI (GPT-4o-mini) | ~$0.001 |
-| ElevenLabs TTS (~3,500 karakter) | ~$0.42 |
-| **Toplam** | **~$0.42/masal** |
+| Google Gemini Flash TTS (~3,500 karakter) | ~$0.10–0.12 |
+| **Toplam** | **~$0.10–0.12/masal** |
 
 ### Kullanıcı başına aylık maliyet
 
 | Senaryo | Masal/ay | TTS maliyet/ay |
 |---------|---------|----------------|
-| Hafif | 8 | $3.36 |
-| Ortalama | 20 | $8.40 |
-| Ağır | 60 | $25.20 |
-
-### Kârlılık özeti (50 abone, ortalama kullanım)
-
-| Kalem | Tutar |
-|-------|-------|
-| Gelir (50 × $8.49) | $424.50 |
-| ElevenLabs (Scale yearly, 4M dahil) | -$275.00 |
-| OpenAI (~1,000 masal) | -$1.00 |
-| **Net kâr** | **+$148.50/ay** |
+| Hafif | 8 | ~$0.88 |
+| Ortalama | 20 | ~$2.20 |
+| Ağır | 60 | ~$6.60 |
 
 Detaylı analiz: [docs/FINANCIAL_ANALYSIS.md](FINANCIAL_ANALYSIS.md)
 
@@ -163,11 +152,12 @@ Detaylı analiz: [docs/FINANCIAL_ANALYSIS.md](FINANCIAL_ANALYSIS.md)
 
 | Dosya | Rol |
 |-------|-----|
-| `edge/src/index.ts` | Saf proxy: auth, rate limit, OpenAI + ElevenLabs iletimi |
+| `edge/src/index.ts` | Saf proxy: auth, rate limit, OpenAI + Google Gemini TTS iletimi |
+| `edge/src/googleAuth.ts` | Google Cloud OAuth2 token (service account → JWT → access token) |
 | `Services/PromptOrchestrator.swift` | Prompt oluşturma, DTO tanımları |
 | `Services/StorySeeds.swift` | 41 mekan, 40 yan karakter, rastgele seçim |
 | `Services/StoryService.swift` | API çağrıları, hata yönetimi |
-| `Models/StoryPreferences.swift` | Tema ve kategori tanımları |
+| `Models/StoryPreferences.swift` | Tema, kategori ve anlatıcı tanımları |
 | `Views/Components/ThemeCategoryPicker.swift` | Akordeon tema seçim UI'ı |
 
-*Son güncelleme: Nisan 2026 — Flash v2.5, saf proxy mimarisi, 24 tema.*
+*Son güncelleme: Nisan 2026 — Gemini Flash TTS, saf proxy mimarisi, 24 tema.*

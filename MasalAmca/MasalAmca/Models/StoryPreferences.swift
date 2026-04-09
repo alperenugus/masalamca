@@ -377,7 +377,6 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
-    /// Premium abonelik gerektiren ElevenLabs sesleri.
     var requiresPremium: Bool {
         switch self {
         case .yumuşakBulut, .bilgeDede: false
@@ -418,15 +417,19 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// ElevenLabs **Serdar Sağlam** (male, Bilge Dede).
-    static let bilgeDedeVoiceID = "NfwyWIJnRR1RrYnStGUG"
-
-    static let yakamozVoiceID = "mF7tIc9VLrznhGooGjaT"
-    static let ihlamurVoiceID = "LYfSi2g3Frvxg50fRl91"
-    static let camFisiltisiVoiceID = "LCHGt3rsPMP50Vs28amI"
-    static let lavantaVoiceID = "ywzrmJ3AgYiLqAeZAGrq"
-    static let ruzgarVoiceID = "j9K9HnBcmgA6xNWqjlX0"
-    static let gelincikVoiceID = "bqaNYmxFgK1TN7CL95PZ"
+    /// Gemini Flash TTS speaker name sent to the proxy as `voice_id`.
+    var voiceName: String {
+        switch self {
+        case .yumuşakBulut: "Achernar"
+        case .bilgeDede: "Algieba"
+        case .yakamoz: "Alnilam"
+        case .ihlamur: "Aoede"
+        case .camFisiltisi: "Iapetus"
+        case .lavanta: "Erinome"
+        case .ruzgar: "Fenrir"
+        case .gelincik: "Sulafat"
+        }
+    }
 
     /// Eski kayıtlar (`neşeliPeri` vb.) için.
     static func resolvedFromStoredRaw(_ raw: String) -> NarratorChoice? {
@@ -434,30 +437,9 @@ enum NarratorChoice: String, CaseIterable, Identifiable, Sendable {
         return NarratorChoice(rawValue: raw)
     }
 
-    /// ElevenLabs **Gökçe Deniz** — `Info.plist` `ElevenLabsVoiceID`, else `"default"`.
-    static func defaultFemaleVoiceID() -> String {
-        Bundle.main.object(forInfoDictionaryKey: "ElevenLabsVoiceID") as? String ?? "default"
-    }
-
-    func resolvedVoiceID() -> String? {
-        switch self {
-        case .yumuşakBulut:
-            Self.defaultFemaleVoiceID()
-        case .bilgeDede:
-            Self.bilgeDedeVoiceID
-        case .yakamoz:
-            Self.yakamozVoiceID
-        case .ihlamur:
-            Self.ihlamurVoiceID
-        case .camFisiltisi:
-            Self.camFisiltisiVoiceID
-        case .lavanta:
-            Self.lavantaVoiceID
-        case .ruzgar:
-            Self.ruzgarVoiceID
-        case .gelincik:
-            Self.gelincikVoiceID
-        }
+    /// Voice identifier sent to the proxy as `voice_id` for story TTS.
+    func resolvedVoiceID() -> String {
+        voiceName
     }
 }
 
@@ -619,11 +601,7 @@ enum StoryPreferences {
 
     static func resolvedVoiceID(for profile: ChildProfile?) -> String {
         let snap = load(for: profile)
-        return snap.narrator.resolvedVoiceID() ?? NarratorChoice.defaultFemaleVoiceID()
-    }
-
-    static func defaultFemaleVoiceID() -> String {
-        NarratorChoice.defaultFemaleVoiceID()
+        return snap.narrator.resolvedVoiceID()
     }
 
     static var autoStopAfterStoryEnds: Bool {

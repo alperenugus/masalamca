@@ -58,7 +58,7 @@
 ┌─ iOS App (continued) ─────────────────────────────────────────────────┐
 │                                                                        │
 │ 11. StoryService → POST /v1/tts (text + voice_id)                     │
-│     └── Worker forwards to ElevenLabs Flash v2.5 → audio/mpeg         │
+│     └── Worker forwards to Google Gemini Flash TTS → audio/mpeg       │
 │ 12. Story saved to SwiftData, audio cached to Documents                │
 │ 13. If user on home tab → auto-open player, stop white noise           │
 │     If user on other tab → show toast "Masal hazır!"                   │
@@ -155,5 +155,5 @@ The Worker receives `{ messages: [...] }` and forwards to OpenAI. Response: `Sto
 See [docs/FINANCIAL_ANALYSIS.md](docs/FINANCIAL_ANALYSIS.md) for detailed analysis.
 
 - **OpenAI**: ~$0.001/story (negligible)
-- **ElevenLabs Flash v2.5**: ~$0.42/story (Pro plan overage)
-- **Recommended plan progression**: Pro → Scale yearly at ~35 subscribers
+- **Google Gemini Flash TTS**: ~$0.10–0.12/story (Cloud TTS HD pricing)
+- See [docs/FINANCIAL_ANALYSIS.md](docs/FINANCIAL_ANALYSIS.md) for detailed analysis

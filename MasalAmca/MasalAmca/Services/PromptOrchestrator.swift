@@ -82,20 +82,19 @@ enum PromptOrchestrator {
         2. İÇERİK VE İŞLEYİŞ: Sadece verilen temayı merkeze al. Hikayeye verilen mekanları ve yan karakterleri dahil ederek ilgi çekici bir kurgu yarat.
         3. YAPI: Masalı net bir "Giriş" (karakter ve mekan tanıtımı), "Gelişme" (temaya uygun macera) ve "Sonuç" (sakinleştirici, uykuya geçiş) şablonuyla kurgula.
         4. GÜVENLİK: Şiddet, korku, ölüm, kötü adam, tehdit, tehlike, ayrımcılık veya cinsel içerik KESİNLİKLE YASAKTIR. Hikayenin her anı çocuk güvenli olmalıdır.
-        5. SESLENDİRME (TTS) OPTİMİZASYONU: Bu metin ElevenLabs ile seslendirilecektir.
-           - Tam ve kurallı cümleler kur.
-           - Virgül ve noktaları doğal nefes durakları yaratacak şekilde stratejik kullan.
-           - Diyaloglarda mutlaka tırnak işareti (" ") kullan.
-           - Abartılı ünlemlerden (!!!) ve tamamı büyük harf (ÖRN: BAĞIRMA) kelimelerden kesinlikle kaçın.
+        5. DİL VE METİN: Masalı baştan sona akıcı, tamamen Türkçe düz metin olarak yaz. Sahne yönergesi, İngilizce talimat, parantez içi yönergeler veya tırnakla ayrılmış “konuşma senaryosu” biçimi KULLANMA — sadece anlatı. Ses tonu ve tempo, seslendirme katmanında ayarlanır; metinde yalnızca hikâye olmalı. Tam ve kurallı cümleler; virgül ve noktaları doğal nefes için kullan. Abartılı ünlem (!!!) ve tamamı büyük harf kelimelerden kaçın.
         6. ÇEŞİTLİLİK: Her masalda tamamen farklı bir olay örgüsü, açılış ve bitiş kullan. Aynı kalıp sonuçları tekrarlama.
         7. DEĞER TEMALARI: Eğer tema bir değer içeriyorsa (ör. dürüstlük, sevgi, saygı), bu değeri hikayenin doğal bir parçası olarak işle; açıkça ders verme, göster.
-        8. UZUNLUK: Masalın gövdesi en az 520 kelime olmalıdır. Hedef dinleme süresi yaklaşık 3-4 dakika.
+        8. UZUNLUK: Masal metni en az 380 kelime olsun. Hedef dinleme süresi yaklaşık 3–4 dakika.
         </KURALLAR>
 
         ÇIKTI FORMATI:
-        Aşağıdaki yapıya sahip geçerli bir JSON döndür. Markdown veya ek metin kullanma. "body" alanı, her bir paragrafın ayrı bir eleman olduğu bir DİZİ (array) olmalıdır.
+        Aşağıdaki yapıya sahip geçerli bir JSON döndür. Markdown veya ek metin kullanma.
+        "body" alanı tek bir metin (string) olmalıdır: masalın tamamı, paragraflar arasında satır sonları kullanabilirsin.
+        İstersen eski uyumluluk için "body" dizi (array) olarak da dönebilirsin; o durumda her eleman bir paragraf veya bölüm metni olsun. Öncelik: tek string "body".
+        genre alanı: calming, adventure veya educational.
 
-        {"title":"Masalın Başlığı","body":["Giriş paragrafı...","Gelişme paragrafı...","...","Sonuç paragrafı..."],"genre":"calming|adventure|educational"}
+        {"title":"Masalın Başlığı","body":"...","genre":"calming"}
         """
     }
 
