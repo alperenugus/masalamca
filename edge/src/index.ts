@@ -1,37 +1,35 @@
 /**
- * Masal Amca — pure proxy for OpenAI + TTS.
+ * Masal Amca — edge proxy for OpenAI story generation + Google Gemini TTS.
  *
- * The iOS app builds the complete prompt (system + user messages).
- * This worker only handles auth, rate limiting, and forwarding.
+ * The worker owns ALL prompt logic: system prompt, user prompt template,
+ * story seeds, and theme definitions. The iOS app sends only structured
+ * data (child name, age group, selected themes). This lets us iterate on
+ * prompts via `wrangler deploy` without an App Store release.
  *
- * Client versioning: the iOS app sends `X-Client-Version: 2` (or higher)
- * to use Google Gemini TTS. Old clients without the header (or version < 2)
- * fall back to ElevenLabs. This lets us deploy one worker that serves both
- * the current production app and future releases.
- *
- * Secrets: OPENAI_API_KEY, PROXY_AUTH_TOKEN,
- *   GOOGLE_SERVICE_ACCOUNT_JSON (for Gemini TTS, version >= 2),
- *   ELEVENLABS_API_KEY (legacy, version < 2)
- * Rate limiting: Cloudflare Workers Rate Limit binding (wrangler.toml [[ratelimits]]).
+ * Secrets: OPENAI_API_KEY, PROXY_AUTH_TOKEN, GOOGLE_SERVICE_ACCOUNT_JSON
+ * Rate limiting: Cloudflare Workers Rate Limit binding (wrangler.toml).
  */
 
 import { getGoogleAccessToken } from "./googleAuth";
+import { buildSystemPrompt, buildUserMessage, type AgeGroup } from "./prompts";
+import { sampleStorySeeds } from "./storySeeds";
+import { pickTheme } from "./themes";
 
 export interface Env {
   OPENAI_API_KEY: string;
-  /** Legacy: ElevenLabs key for old clients (X-Client-Version < 2). */
-  ELEVENLABS_API_KEY?: string;
-  ELEVENLABS_VOICE_ID?: string;
-  /** Google service account JSON for Gemini TTS (X-Client-Version >= 2). */
-  GOOGLE_SERVICE_ACCOUNT_JSON?: string;
+  GOOGLE_SERVICE_ACCOUNT_JSON: string;
   PROXY_AUTH_TOKEN?: string;
   API_RATE_LIMITER: RateLimit;
-  /** Gemini-TTS fallback speaker when client sends voice_id=default. */
+  /** Fallback Gemini speaker when client sends voice_id=default. */
   GOOGLE_TTS_VOICE_NAME?: string;
 }
 
+// ─── Request types ───────────────────────────────────────────────────
+
 interface StoryRequest {
-  messages: { role: string; content: string }[];
+  child_name: string;
+  age_group: AgeGroup;
+  themes: string[];
 }
 
 interface TTSRequest {
@@ -42,15 +40,8 @@ interface TTSRequest {
 
 // ─── Constants ───────────────────────────────────────────────────────
 
-const ELEVEN_TTS_MODEL = "eleven_flash_v2_5";
 const GOOGLE_TTS_LANG = "tr-TR";
 const GEMINI_TTS_MODEL = "gemini-2.5-flash-tts";
-
-/**
- * Minimum client version that uses Google Gemini TTS.
- * Clients below this version use ElevenLabs (legacy).
- */
-const MIN_GEMINI_VERSION = 2;
 
 const GEMINI_TTS_STYLE_PROMPT = `Read the following text as a comforting, wise, and engaging storyteller for children. Your voice should be incredibly warm, gentle, and deeply soothing. Speak with a patient, melodic tone, as if reading a bedtime story to help a child feel completely safe and relaxed.
 
@@ -58,13 +49,13 @@ Keep the pacing slow and deliberate. Use natural, hushed pauses to build a sense
 
 The entire passage is a story in Turkish (Türkçe). Read it from start to finish as continuous narration only. Do not speak any English, stage directions, or meta-instructions — there should be none in the text; if you ever see English words, skip them and continue with the Turkish story.`;
 
-// ─── Utilities ───────────────────────────────────────────────────────
+const VALID_AGE_GROUPS: ReadonlySet<string> = new Set([
+  "two_to_four",
+  "five_to_seven",
+  "eight_plus",
+]);
 
-function clientVersion(request: Request): number {
-  const raw = request.headers.get("X-Client-Version") ?? "1";
-  const n = parseInt(raw, 10);
-  return Number.isFinite(n) ? n : 1;
-}
+// ─── Utilities ───────────────────────────────────────────────────────
 
 function resolveGeminiVoice(voiceId: string | undefined, env: Env): string {
   const id = (voiceId ?? "").trim();
@@ -150,8 +141,7 @@ function jsonResponse(data: Record<string, unknown>, status = 200): Response {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    const ver = clientVersion(request);
-    console.log(`[req] ${request.method} ${url.pathname} client_v=${ver}`);
+    console.log(`[req] ${request.method} ${url.pathname}`);
 
     if (!authOk(request, env)) {
       return new Response("Unauthorized", { status: 401 });
@@ -165,13 +155,13 @@ export default {
     if (request.method === "POST" && url.pathname.endsWith("/v1/tts")) {
       const limited = await enforceRateLimit(env, request);
       if (limited) return limited;
-      return handleTTS(request, env, ver);
+      return handleTTS(request, env);
     }
     return new Response("Masal Amca proxy", { status: 200 });
   },
 };
 
-// ─── Story (pure proxy to OpenAI) ───────────────────────────────────
+// ─── Story generation ────────────────────────────────────────────────
 
 async function handleStory(request: Request, env: Env): Promise<Response> {
   const startedAt = Date.now();
@@ -184,11 +174,34 @@ async function handleStory(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: "invalid_json" }, 400);
   }
 
-  if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
-    return jsonResponse({ error: "missing_messages" }, 400);
+  if (!body.child_name?.trim()) {
+    return jsonResponse({ error: "missing_child_name" }, 400);
+  }
+  if (!body.age_group || !VALID_AGE_GROUPS.has(body.age_group)) {
+    return jsonResponse({ error: "invalid_age_group", valid: [...VALID_AGE_GROUPS] }, 400);
+  }
+  if (!Array.isArray(body.themes) || body.themes.length === 0) {
+    return jsonResponse({ error: "missing_themes" }, 400);
   }
 
-  console.log(`[story ${reqID}] messages=${body.messages.length} started`);
+  const theme = pickTheme(body.themes);
+  const seeds = sampleStorySeeds();
+  const systemPrompt = buildSystemPrompt();
+  const userMessage = buildUserMessage(
+    body.child_name.trim(),
+    body.age_group,
+    theme,
+    seeds,
+  );
+
+  const messages = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userMessage },
+  ];
+
+  console.log(
+    `[story ${reqID}] theme=${theme.rawValue} age=${body.age_group} started`,
+  );
 
   let openaiRes: Response;
   try {
@@ -203,7 +216,7 @@ async function handleStory(request: Request, env: Env): Promise<Response> {
         body: JSON.stringify({
           model: "gpt-4o-mini",
           response_format: { type: "json_object" },
-          messages: body.messages,
+          messages,
           temperature: 0.9,
           max_tokens: 6000,
         }),
@@ -256,13 +269,9 @@ async function handleStory(request: Request, env: Env): Promise<Response> {
   });
 }
 
-// ─── TTS Router ─────────────────────────────────────────────────────
+// ─── TTS: Google Gemini Flash TTS ───────────────────────────────────
 
-async function handleTTS(
-  request: Request,
-  env: Env,
-  ver: number,
-): Promise<Response> {
+async function handleTTS(request: Request, env: Env): Promise<Response> {
   let body: TTSRequest;
   try {
     body = (await request.json()) as TTSRequest;
@@ -274,18 +283,6 @@ async function handleTTS(
     return jsonResponse({ error: "missing_text" }, 400);
   }
 
-  if (ver >= MIN_GEMINI_VERSION) {
-    return handleTTSGemini(body, env);
-  }
-  return handleTTSElevenLabs(body, env);
-}
-
-// ─── TTS: Google Gemini Flash TTS (version >= 2) ────────────────────
-
-async function handleTTSGemini(
-  body: TTSRequest,
-  env: Env,
-): Promise<Response> {
   if (!env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()) {
     return jsonResponse(
       { error: "google_tts_not_configured", message: "GOOGLE_SERVICE_ACCOUNT_JSON eksik." },
@@ -303,7 +300,7 @@ async function handleTTSGemini(
     projectId = tok.projectId;
   } catch (err) {
     const msg = (err as Error).message ?? "google_auth_error";
-    console.log(`[tts gemini] auth failed: ${msg}`);
+    console.log(`[tts] auth failed: ${msg}`);
     return jsonResponse(
       {
         error: "google_auth_failed",
@@ -353,7 +350,7 @@ async function handleTTSGemini(
 
   const raw = await gRes.text();
   if (!gRes.ok) {
-    console.log(`[tts gemini] ${gRes.status} ${raw.slice(0, 600)}`);
+    console.log(`[tts] ${gRes.status} ${raw.slice(0, 600)}`);
     return jsonResponse(
       {
         error: "tts_failed",
@@ -383,88 +380,6 @@ async function handleTTSGemini(
   }
 
   return new Response(binary, {
-    headers: { "Content-Type": "audio/mpeg" },
-  });
-}
-
-// ─── TTS: ElevenLabs (legacy, version < 2) ──────────────────────────
-
-async function handleTTSElevenLabs(
-  body: TTSRequest,
-  env: Env,
-): Promise<Response> {
-  if (!env.ELEVENLABS_API_KEY?.trim()) {
-    return jsonResponse(
-      { error: "elevenlabs_not_configured", message: "ELEVENLABS_API_KEY eksik." },
-      500,
-    );
-  }
-
-  const voice =
-    body.voice_id && body.voice_id !== "default"
-      ? body.voice_id
-      : env.ELEVENLABS_VOICE_ID ?? "";
-  const outputFormat = body.output_format?.trim() || "mp3_44100_128";
-
-  let elevenRes: Response;
-  try {
-    elevenRes = await fetchWithTimeout(
-      `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=${encodeURIComponent(outputFormat)}`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": env.ELEVENLABS_API_KEY!,
-          "Content-Type": "application/json",
-          Accept: "audio/mpeg",
-        },
-        body: JSON.stringify({
-          text: body.text,
-          model_id: ELEVEN_TTS_MODEL,
-          language_code: "tr",
-        }),
-      },
-      180_000,
-      "elevenlabs",
-    );
-  } catch (err) {
-    const msg = (err as Error).message ?? "elevenlabs_error";
-    return jsonResponse({ error: msg }, 504);
-  }
-
-  if (!elevenRes.ok) {
-    const t = await elevenRes.text();
-    try {
-      const j = JSON.parse(t) as {
-        detail?: { status?: string; message?: string } | string;
-      };
-      const status =
-        typeof j.detail === "object" && j.detail ? j.detail.status : undefined;
-      const msg =
-        typeof j.detail === "object" && j.detail ? j.detail.message : undefined;
-      if (status === "quota_exceeded") {
-        return jsonResponse(
-          {
-            error: "quota_exceeded",
-            message: "Seslendirme kotası doldu. Lütfen daha sonra tekrar dene.",
-            detail: msg ?? null,
-          },
-          402,
-        );
-      }
-    } catch {
-      // fall through
-    }
-    return jsonResponse(
-      {
-        error: "tts_failed",
-        message: "Seslendirme şu anda yapılamadı. Lütfen tekrar dene.",
-        detail: t.slice(0, 800),
-      },
-      502,
-    );
-  }
-
-  return new Response(elevenRes.body, {
     headers: { "Content-Type": "audio/mpeg" },
   });
 }

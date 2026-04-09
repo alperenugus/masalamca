@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Masal Amca is a Turkish bedtime story app for children. It generates personalized stories using AI (OpenAI GPT-4o-mini) and narrates them with Google Gemini Flash TTS. A Cloudflare Worker acts as a pure proxy (auth + rate limiting). The app also provides white noise playback for sleep.
+Masal Amca is a Turkish bedtime story app for children. It generates personalized stories using AI (OpenAI GPT-4o-mini) and narrates them with Google Gemini Flash TTS. A Cloudflare Worker handles auth, rate limiting, prompt construction, and AI provider forwarding. The app also provides white noise playback for sleep.
 
 - **Platform:** iOS 17+, iPhone and iPad
 - **Language:** Swift 5, SwiftUI, SwiftData
@@ -32,7 +32,7 @@ Masal Amca is a Turkish bedtime story app for children. It generates personalize
 
 7. **Audio session.** Configured once in `MasalAmcaApp.init()` as `.playback` without `.mixWithOthers`. Do not change this — `.mixWithOthers` prevents the lock screen Now Playing card from appearing.
 
-8. **Story generation flow.** The iOS app owns ALL prompt logic. `PromptOrchestrator` builds the full `messages` array (system + user), `StorySeeds` provides randomized places/characters, and the Worker is a pure proxy. Never add prompt logic to the Worker.
+8. **Story generation flow.** The Cloudflare Worker owns ALL prompt logic: system prompt, user prompt template, story seeds, and theme hints (`edge/src/prompts.ts`, `edge/src/themes.ts`, `edge/src/storySeeds.ts`). The iOS app sends only structured data (`child_name`, `age_group`, `themes`) via `PromptOrchestrator`. To change prompts, seeds, or the LLM model, update the worker and run `wrangler deploy` — no App Store release needed.
 
 9. **Post-generation behavior.** After story generation: if the user is still on the home tab, auto-open the player. If the user switched tabs, only show a toast — never auto-navigate across tabs.
 
@@ -50,7 +50,7 @@ Masal Amca is a Turkish bedtime story app for children. It generates personalize
 | `Views/Onboarding/` | Onboarding flow (multi-page TabView) |
 | `Views/Components/` | Reusable UI: tab bar, mini player, cards, buttons, ThemeCategoryPicker |
 | `Models/` | SwiftData models, enums, StoryThemeCategory, StoryBentoTheme |
-| `Services/` | Audio, networking, subscriptions, notifications, StorySeeds, PromptOrchestrator |
+| `Services/` | Audio, networking, subscriptions, notifications, PromptOrchestrator (DTO builder) |
 | `Theme/` | Design tokens, palette, typography |
 | `Data/` | Profile manager, sync persistence |
 | `Utilities/` | Helpers (PresentedStory, Color+Hex) |
@@ -70,13 +70,14 @@ Masal Amca is a Turkish bedtime story app for children. It generates personalize
 ## Story generation architecture
 
 ```
-iOS (PromptOrchestrator)           Worker (pure proxy)           Providers
-├── Pick 1 random theme            ├── Validate messages          ├── OpenAI GPT-4o-mini
-├── Pick 1-2 random places         ├── Forward to OpenAI          ├── Google Gemini Flash TTS
-├── Pick 1-2 random characters     ├── Join body[] → string       │
-├── Build system prompt            ├── Return {title,body,genre}  │
-├── Build user message             │                              │
-└── Send {messages: [...]}         └── TTS: forward text+voice    │
+iOS (PromptOrchestrator)           Worker (prompt builder)        Providers
+├── Load child profile             ├── Pick 1 random theme        ├── OpenAI GPT-4o-mini
+├── Collect theme rawValues        ├── Sample story seeds          ├── Google Gemini Flash TTS
+├── Map age group string           ├── Build system prompt         │
+└── Send {child_name,              ├── Build user message          │
+         age_group,                ├── Forward to OpenAI           │
+         themes: [...]}            ├── Return {title,body,genre}   │
+                                   └── TTS: forward text+voice     │
 ```
 
 ## Theme system

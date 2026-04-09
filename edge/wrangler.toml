@@ -3,7 +3,6 @@ main = "src/index.ts"
 compatibility_date = "2025-03-01"
 
 # Per-IP burst protection (see src/index.ts). Requires wrangler >= 4.36.
-# Limit is per Cloudflare PoP, per key; each story uses 2 calls (story + tts).
 [[ratelimits]]
 name = "API_RATE_LIMITER"
 namespace_id = "1001"
@@ -15,4 +14,4 @@ namespace_id = "1001"
 [vars]
 # Secrets via: wrangler secret put <NAME>
 # Required: OPENAI_API_KEY, PROXY_AUTH_TOKEN, GOOGLE_SERVICE_ACCOUNT_JSON
-# Legacy (keep for old app versions): ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
+# Optional: GOOGLE_TTS_VOICE_NAME (fallback speaker when voice_id=default)

@@ -2,6 +2,8 @@
 
 Last updated: April 2026
 
+> **Note:** The app migrated from ElevenLabs to Google Gemini Flash TTS in April 2026, reducing per-story TTS cost by ~75%. ElevenLabs figures below are historical. Current production cost: ~$0.10–0.12/story (OpenAI + Gemini TTS).
+
 ## Revenue Model
 
 

@@ -1,19 +1,8 @@
-# Masal Amca — Edge Proxy
+# Masal Amca — Edge Worker
 
-Cloudflare Worker that acts as a **pure proxy** for **OpenAI** (story JSON) and **TTS** (narration audio). API keys never ship in the iOS app.
+Cloudflare Worker that handles **auth**, **rate limiting**, **prompt construction**, and **AI provider forwarding** for story generation (OpenAI) and narration (Google Gemini TTS). API keys never ship in the iOS app.
 
-The Worker does NOT build prompts or hold any story logic. The iOS app sends the complete `messages` array via `PromptOrchestrator`, and the Worker forwards it to OpenAI.
-
-## Client versioning
-
-The Worker supports multiple iOS app versions simultaneously via the `X-Client-Version` header:
-
-| Header value | TTS provider | Voice ID format |
-|-------------|--------------|-----------------|
-| `2` (or higher) | **Google Gemini Flash TTS** | Gemini speaker name (e.g. `Achernar`) |
-| `1` (or missing) | **ElevenLabs Flash v2.5** (legacy) | ElevenLabs voice UUID |
-
-This lets you deploy one Worker that serves both the current production app and new releases. When all users have upgraded, the ElevenLabs fallback can be removed.
+The Worker owns all prompt logic: system prompt, user prompt template, story seeds, and theme definitions. The iOS app sends only structured data (`child_name`, `age_group`, `themes`). To iterate on prompts, update the worker files and run `wrangler deploy` — no App Store release needed.
 
 ## Setup
 
@@ -24,9 +13,6 @@ cp .env.example .env
 npx wrangler secret put OPENAI_API_KEY
 npx wrangler secret put PROXY_AUTH_TOKEN
 npx wrangler secret put GOOGLE_SERVICE_ACCOUNT_JSON
-# Keep for old app versions:
-npx wrangler secret put ELEVENLABS_API_KEY
-npx wrangler secret put ELEVENLABS_VOICE_ID
 npx wrangler dev
 ```
 
@@ -46,21 +32,15 @@ npx wrangler deploy
 
 Set the worker URL in the iOS app **Info.plist** keys `ProxyBaseURL` (e.g. `https://masal-amca-proxy.youraccount.workers.dev`) and `ProxyAuthToken` (must match `PROXY_AUTH_TOKEN`).
 
-## Testing `/v1/tts` locally
+## Worker source files
 
-1. Create `edge/.dev.vars` with the same keys as production (including `PROXY_AUTH_TOKEN` and `GOOGLE_SERVICE_ACCOUNT_JSON`).
-2. Run `npx wrangler dev` (or `npx wrangler dev --remote` to use secrets from Cloudflare without pasting JSON locally).
-3. Call with the same `Authorization` header the app uses:
-
-```bash
-curl -sS -X POST "http://localhost:8787/v1/tts" \
-  -H "Authorization: Bearer YOUR_PROXY_AUTH_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"text":"Merhaba, bu bir test.","voice_id":"Achernar","output_format":"mp3_44100_128"}' \
-  -o /tmp/out.mp3 && file /tmp/out.mp3
-```
-
-Expect **`MPEG`** / **audio** for success; JSON with `error` for failures.
+| File | Purpose |
+|------|---------|
+| `src/index.ts` | Router, story handler, TTS handler, auth, rate limiting |
+| `src/prompts.ts` | System prompt, user prompt template, age group text mapping |
+| `src/themes.ts` | 24 theme definitions with Turkish hints (mirrors iOS `StoryBentoTheme` rawValues) |
+| `src/storySeeds.ts` | ~40 places, ~40 characters, plot hooks, family threads, objects |
+| `src/googleAuth.ts` | Google Cloud service account OAuth2 (JWT → access token) |
 
 ## Architecture
 
@@ -68,29 +48,44 @@ Expect **`MPEG`** / **audio** for success; JSON with `error` for failures.
 iOS App                          Worker                        Providers
 ────────                         ──────                        ─────────
 PromptOrchestrator               Auth + Rate Limit             OpenAI
-├── buildSystemPrompt()   ──→    Forward messages[] ────→      GPT-4o-mini
-├── buildUserMessage()           Parse JSON response            (json_object)
-├── StorySeeds (places,          Join body[] → string
-│   sideCharacters)              Return DTO
-└── {messages: [sys, user]}
-                                 TTS proxy                     Google Cloud
-text + voice_id          ──→     Forward to Gemini TTS  ──→   Gemini 2.5 Flash TTS
-                          ←──    Return audio/mpeg      ←──    (base64 → binary)
+├── profile.name          ──→    Pick theme from themes[]      GPT-4o-mini
+├── profile.ageGroup             Sample story seeds             (json_object)
+├── themes: [rawValue...]        Build system + user prompts
+└── {child_name,                 Forward messages to OpenAI
+     age_group,                  Parse JSON response
+     themes: [...]}              Return DTO
+
+                                 TTS                           Google Cloud
+text + voice_id          ──→     Style prompt + Gemini TTS ──→ Gemini 2.5 Flash TTS
+                          ←──    Return audio/mpeg       ←──   (base64 → binary)
 ```
 
 ## Endpoints
 
 ### `POST /v1/story`
 
-**Request:** `{ messages: [{ role: "system", content: "..." }, { role: "user", content: "..." }] }`
+**Request:**
+
+```json
+{
+  "child_name": "Ali",
+  "age_group": "five_to_seven",
+  "themes": ["adventure", "space"]
+}
+```
+
+- `child_name` — hero of the story
+- `age_group` — one of `two_to_four`, `five_to_seven`, `eight_plus`
+- `themes` — array of theme rawValues; worker picks one randomly
 
 **Processing:**
 1. Validate `Authorization: Bearer <token>`
 2. Rate limit check (Workers binding, per IP)
-3. Forward `messages` to OpenAI `gpt-4o-mini` with `response_format: { type: "json_object" }`, `temperature: 0.9`
-4. Parse response JSON `{ title, body, genre }`
-5. If `body` is an array, join with `\n\n`
-6. Return `{ title, body, genre, word_count, model }`
+3. Pick one theme, sample seeds, build system + user prompts
+4. Forward built messages to OpenAI `gpt-4o-mini` with `response_format: { type: "json_object" }`, `temperature: 0.9`
+5. Parse response JSON `{ title, body, genre }`
+6. If `body` is an array, join with `\n\n`
+7. Return `{ title, body, genre, word_count, model, request_id }`
 
 ### `POST /v1/tts`
 
@@ -120,13 +115,10 @@ text + voice_id          ──→     Forward to Gemini TTS  ──→   Gemini
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | Full JSON for Google Gemini Flash TTS |
 | `PROXY_AUTH_TOKEN` | Shared secret with iOS app |
 | `GOOGLE_TTS_VOICE_NAME` | (optional) Fallback speaker name when `voice_id=default` |
-| `ELEVENLABS_API_KEY` | (legacy) ElevenLabs key for old app versions |
-| `ELEVENLABS_VOICE_ID` | (legacy) Default voice UUID for old app versions |
 
 ## Models
 
 | Provider | Model | Purpose |
 |----------|-------|---------|
 | OpenAI | `gpt-4o-mini` | Story text generation |
-| Google | `gemini-2.5-flash-tts` | TTS narration (Turkish) — `X-Client-Version >= 2` |
-| ElevenLabs | `eleven_flash_v2_5` | TTS narration (Turkish, legacy) — `X-Client-Version < 2` |
+| Google | `gemini-2.5-flash-tts` | TTS narration (Turkish, Gemini Flash TTS via Cloud TTS API) |

@@ -56,7 +56,6 @@ private struct ProxyErrorDTO: Codable {
 
 actor StoryService {
     private let session: URLSession
-    private static let clientVersion = "2"
 
     init(session: URLSession = .shared) {
         self.session = session
@@ -64,7 +63,6 @@ actor StoryService {
 
     private func setCommonHeaders(on request: inout URLRequest, authToken: String) {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(Self.clientVersion, forHTTPHeaderField: "X-Client-Version")
         if !authToken.isEmpty {
             request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         }

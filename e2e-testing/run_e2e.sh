@@ -33,7 +33,6 @@ for i in 1 2 3; do
   STORY_START=$(date +%s)
   STORY_RESP=$(curl -sS -w "\n%{http_code}" -X POST "$BASE/v1/story" \
     -H "Content-Type: application/json" \
-    -H "X-Client-Version: 2" \
     --data-binary @"$REQ")
 
   STORY_HTTP=$(echo "$STORY_RESP" | tail -1)
@@ -72,7 +71,6 @@ for i in 1 2 3; do
   TTS_HTTP=$(curl -sS -o "$OUT_DIR/narration_${i}_${VOICE}.mp3" -w "%{http_code}" \
     -X POST "$BASE/v1/tts" \
     -H "Content-Type: application/json" \
-    -H "X-Client-Version: 2" \
     -d "$TTS_PAYLOAD")
   TTS_END=$(date +%s)
 

@@ -1,6 +1,6 @@
 # Masal Amca — API & Kullanım Raporu
 
-Bu belge, uygulamanın **dış API'lere** nasıl bağlandığını, hangi **modelleri** kullandığını, **istemci ↔ edge proxy ↔ sağlayıcı** akışını, **prompt / güvenlik** katmanını ve **maliyet** çerçevesini özetler.
+Bu belge, uygulamanın **dış API'lere** nasıl bağlandığını, hangi **modelleri** kullandığını, **istemci ↔ edge worker ↔ sağlayıcı** akışını, **prompt / güvenlik** katmanını ve **maliyet** çerçevesini özetler.
 
 ---
 
@@ -8,8 +8,8 @@ Bu belge, uygulamanın **dış API'lere** nasıl bağlandığını, hangi **mode
 
 | Katman | Rol |
 |--------|-----|
-| **iOS uygulaması** | SwiftUI + SwiftData. `PromptOrchestrator` tüm prompt mantığını (system + user mesajları) hazırlar. `StorySeeds` rastgele mekan ve karakter seçer. `StoryService` ile yalnızca Cloudflare Worker proxy'ye bağlanır. API anahtarları uygulamada **tutulmaz**. |
-| **Edge proxy** (`edge/src/index.ts`) | Saf proxy: iOS'tan gelen `messages[]` dizisini OpenAI'ye iletir. `body[]` dizisini string'e dönüştürür. TTS isteğini Google Gemini Flash TTS'e iletir. Bearer token ile korunur. Rate limiting uygulanır. Prompt mantığı **yoktur**. |
+| **iOS uygulaması** | SwiftUI + SwiftData. `PromptOrchestrator` yapılandırılmış veri hazırlar (`child_name`, `age_group`, `themes`). `StoryService` ile yalnızca Cloudflare Worker'a bağlanır. API anahtarları uygulamada **tutulmaz**. |
+| **Edge worker** (`edge/src/`) | Prompt oluşturma, rastgele çeşitlilik, auth ve rate limiting. `prompts.ts` sistem + kullanıcı promptunu hazırlar. `themes.ts` 24 tema tanımını tutar. `storySeeds.ts` mekan, karakter, olay, aile ve nesne havuzlarından örnekler. OpenAI'ye iletir. TTS isteğini Google Gemini Flash TTS'e iletir. |
 | **OpenAI** | Masal metni (JSON): `gpt-4o-mini`, `response_format: json_object`, `temperature: 0.9` |
 | **Google Gemini Flash TTS** | Masal sesli anlatımı (MP3): `gemini-2.5-flash-tts`, Türkçe (`tr-TR`), stil promptu ile |
 
@@ -35,27 +35,23 @@ Uygulama, **Gemini 2.5 Flash TTS** modelini Cloud Text-to-Speech API üzerinden 
 | **Çıktı formatı** | `response_format: { type: "json_object" }` |
 | **Sıcaklık** | `0.9` |
 
-**İstek gövdesi (uygulama → proxy):**
+**İstek gövdesi (uygulama → worker):**
 
 ```json
 {
-  "messages": [
-    { "role": "system", "content": "..." },
-    { "role": "user", "content": "..." }
-  ]
+  "child_name": "Ali",
+  "age_group": "five_to_seven",
+  "themes": ["adventure", "space"]
 }
 ```
 
-`PromptOrchestrator` (iOS) bu mesajları hazırlar:
-- **System prompt**: Güvenlik kuralları, metin optimizasyonu, JSON formatı, çeşitlilik direktifleri
-- **User message**: Çocuğun adı, yaş grubu, seçilen tema (1 adet), rastgele mekanlar (1-2), rastgele yan karakterler (1-2)
+Worker bu yapılandırılmış veriden prompt oluşturur:
+- **Tema seçimi**: `themes[]` dizisinden rastgele 1 tema seçer (`themes.ts`)
+- **Çeşitlilik örnekleme**: `storySeeds.ts` — ~40 mekan, ~40 yan karakter, 18 olay çekirdeği, 18 aile bağı, 18 nesne
+- **System prompt**: Güvenlik kuralları, metin optimizasyonu, JSON formatı, çeşitlilik direktifleri (`prompts.ts`)
+- **User message**: Çocuğun adı, yaş grubu, seçilen tema, mekan, yan karakter, olay, aile, nesne (`prompts.ts`)
 
-**İçerik çeşitlilik motoru (`StorySeeds.swift`):**
-- 41 farklı mekan (açık hava, su, orman, gökyüzü, kapalı, fantastik)
-- 40 farklı yan karakter (sihirli, orman, su/gökyüzü, bilge, sevimli)
-- Her istek için `shuffled().prefix()` ile benzersiz seçim
-
-**Yanıt (proxy → uygulama):** `{ title, body, genre, word_count, model }`
+**Yanıt (worker → uygulama):** `{ title, body, genre, word_count, model, request_id }`
 - `body` alanı OpenAI'den string veya paragraf dizisi olarak gelebilir; Worker her iki durumu da destekler.
 
 ### 3.2 `POST /v1/tts` (Google Gemini Flash TTS)
@@ -76,9 +72,9 @@ Uygulama, **Gemini 2.5 Flash TTS** modelini Cloud Text-to-Speech API üzerinden 
 
 ## 4. Prompt yapısı
 
-### 4.1 System prompt (`PromptOrchestrator.buildSystemPrompt()`)
+### 4.1 System prompt (`edge/src/prompts.ts`)
 
-iOS tarafında oluşturulur. Kurallar:
+Worker tarafında oluşturulur. Kurallar:
 - Türkçe, çocuk uyku masalı
 - Şiddet, korku, yaralanma, ölüm **yasak**
 - Çocuk kahraman, yaşa uygun kelime hazinesi
@@ -86,14 +82,19 @@ iOS tarafında oluşturulur. Kurallar:
 - Çeşitlilik: aynı temada bile farklı olay örgüsü, klişe son yok
 - JSON çıktısı: `{ "title": "...", "body": "...", "genre": "calming|adventure|educational" }`
 
-### 4.2 User message (`PromptOrchestrator.buildUserMessage()`)
+### 4.2 User message (`edge/src/prompts.ts`)
 
 ```
 Çocuğun Adı: [isim]
 Çocuğun Yaşı: [yaş grubu]
 Masalın Teması: [1 tema + ipuçları]
-Mekan(lar): [rastgele 1-2 mekan]
-Yan Karakter(ler): [rastgele 1-2 karakter]
+
+Çeşitlilik ipuçları:
+- Mekân: [rastgele mekan]
+- Yan karakter: [rastgele karakter]
+- Olay çekirdeği: [rastgele olay]
+- Aile / yakınlık: [rastgele aile bağı]
+- Nesne veya sihirli detay: [rastgele nesne]
 ```
 
 ---
@@ -110,7 +111,7 @@ Yan Karakter(ler): [rastgele 1-2 karakter]
 | Günlük Hayat | Arkadaşlık, Müzik, Araçlar |
 | Değerler Eğitimi | Dürüstlük, Doğruluk, Sevgi, Çalışkanlık, Saygı, Cömertlik, Adalet, Sorumluluk, Yardımseverlik |
 
-Her masal üretiminde kullanıcının seçili temalarından **yalnızca 1 tanesi** rastgele seçilir.
+Tema tanımları iOS'ta (UI, premium gating) ve worker'da (prompt, hint seçimi) `rawValue` string'leri ile eşleşir. Her masal üretiminde worker, kullanıcının seçili temalarından **yalnızca 1 tanesi** rastgele seçer.
 
 ---
 
@@ -121,7 +122,7 @@ Her masal üretiminde kullanıcının seçili temalarından **yalnızca 1 tanesi
 | **Anahtarlar cihazda değil** | OpenAI ve Google SA anahtarları yalnızca Worker ortamında (Wrangler secrets) |
 | **Proxy auth** | `PROXY_AUTH_TOKEN` ayarlıysa `Authorization: Bearer …` zorunlu; aksi halde 401 |
 | **Rate limiting** | Workers binding ile IP bazlı, 40 req/60s per PoP |
-| **İçerik kuralları** | System prompt'ta şiddet/korku/ölüm yasak, JSON şeması zorunlu |
+| **İçerik kuralları** | Worker system prompt'ta şiddet/korku/ölüm yasak, JSON şeması zorunlu |
 | **Ücretsiz katman limiti** | `SubscriptionManager`: ömür boyu 2 ücretsiz masal |
 
 ---
@@ -152,12 +153,14 @@ Detaylı analiz: [docs/FINANCIAL_ANALYSIS.md](FINANCIAL_ANALYSIS.md)
 
 | Dosya | Rol |
 |-------|-----|
-| `edge/src/index.ts` | Saf proxy: auth, rate limit, OpenAI + Google Gemini TTS iletimi |
+| `edge/src/index.ts` | Router, auth, rate limit, story handler, TTS handler |
+| `edge/src/prompts.ts` | System prompt, user prompt template, yaş grubu eşleme |
+| `edge/src/themes.ts` | 24 tema tanımı, `apiThemeHints`, tema seçimi |
+| `edge/src/storySeeds.ts` | ~40 mekan, ~40 karakter, olay, aile, nesne havuzları |
 | `edge/src/googleAuth.ts` | Google Cloud OAuth2 token (service account → JWT → access token) |
-| `Services/PromptOrchestrator.swift` | Prompt oluşturma, DTO tanımları |
-| `Services/StorySeeds.swift` | 41 mekan, 40 yan karakter, rastgele seçim |
+| `Services/PromptOrchestrator.swift` | Yapılandırılmış istek DTO'su (`StoryRequestDTO`) |
 | `Services/StoryService.swift` | API çağrıları, hata yönetimi |
-| `Models/StoryPreferences.swift` | Tema, kategori ve anlatıcı tanımları |
+| `Models/StoryPreferences.swift` | Tema, kategori ve anlatıcı tanımları (UI + premium gating) |
 | `Views/Components/ThemeCategoryPicker.swift` | Akordeon tema seçim UI'ı |
 
-*Son güncelleme: Nisan 2026 — Gemini Flash TTS, saf proxy mimarisi, 24 tema.*
+*Son güncelleme: Nisan 2026 — Worker-owned prompt mimarisi, Gemini Flash TTS, 24 tema.*

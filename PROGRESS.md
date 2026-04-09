@@ -1,13 +1,26 @@
 # Masal Amca — Progress Ledger
 
-## 2026-04-09 — v1.2 Documentation & Architecture Update
+## 2026-04-09 — v1.3 Prompt Logic Migration to Worker
 
 ### Architecture changes
-- **Pure proxy architecture**: Worker rewritten as stateless proxy. All prompt logic (system prompt, theme selection, seed randomization) moved to iOS app (`PromptOrchestrator`, `StorySeeds`).
-- **Theme category system**: 24 themes organized into 5 categories (`StoryThemeCategory`) — Macera & Keşif, Doğa & Hayvanlar, Hayal Dünyası, Günlük Hayat, Değerler Eğitimi. `ThemeCategoryPicker` accordion component reused in Onboarding and Story Settings.
-- **Expanded content variety**: 41 randomized places, 40 side characters in `StorySeeds.swift`. One theme randomly selected per generation.
-- **TTS model**: Migrated from ElevenLabs Flash v2.5 to **Google Gemini Flash TTS** (`gemini-2.5-flash-tts`) — ~75% cost reduction with style-prompted narration and Turkish GA support.
-- **Messages-based API**: iOS sends `{ messages: [system, user] }` to Worker; Worker forwards to OpenAI and joins `body[]` array into string.
+- **Worker-owned prompts**: All prompt logic (system prompt, user prompt template, story seeds, theme hints) moved from iOS to the Cloudflare Worker. iOS sends structured `{ child_name, age_group, themes }` instead of full `messages` arrays. Prompts can be iterated via `wrangler deploy` without App Store release.
+- **New worker source files**: `edge/src/prompts.ts` (system + user prompts), `edge/src/themes.ts` (24 theme definitions with hints), `edge/src/storySeeds.ts` (~40 places, ~40 characters, 18 plot hooks, 18 family threads, 18 objects).
+- **Simplified iOS**: `PromptOrchestrator` reduced to a thin DTO builder (`StoryRequestDTO`). Prompt builder methods, `StoryGenerateRequestDTO.Message` type removed.
+- **Removed versioning**: `X-Client-Version` header and ElevenLabs fallback removed. Single TTS path (Google Gemini Flash TTS).
+- **Richer story variety**: Worker seeds include plot hooks, family threads, and objects beyond the original iOS places/characters — woven into user prompt via variation block.
+
+### Documentation
+- Updated all docs to reflect worker-owned prompt architecture.
+- Updated `AGENTS.md` rule 8, `ARCHITECTURE.md`, `DEVELOPER_SETUP.md`, `MasalAmca.md`, `Project Wiki`, `API_USAGE_REPORT.md`, `edge/README.md`.
+
+---
+
+## 2026-04-09 — v1.2 TTS Migration & Documentation Update
+
+### Architecture changes (superseded by v1.3 migration above)
+- **TTS migration**: Migrated from ElevenLabs Flash v2.5 to **Google Gemini Flash TTS** (`gemini-2.5-flash-tts`) — ~75% cost reduction with style-prompted narration and Turkish GA support.
+- **Theme category system**: 24 themes organized into 5 categories (`StoryThemeCategory`).
+- **Expanded content variety**: Story seeds expanded.
 
 ### Bug fixes
 - **Story/audio mismatch after generation**: Fixed audio from previous story playing when new story opens. `StoryPlayerView` now verifies both story ID and title match before skipping audio reload.

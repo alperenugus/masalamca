@@ -16,15 +16,15 @@
 
 | Layer | Technology | Role |
 |-------|-----------|------|
-| **iOS app** | SwiftUI + SwiftData, iOS 17+ | UI, audio playback, prompt building, local storage |
-| **Edge proxy** | Cloudflare Workers | Stateless proxy holding API keys, auth + rate limiting |
+| **iOS app** | SwiftUI + SwiftData, iOS 17+ | UI, audio playback, profile management, local storage |
+| **Edge worker** | Cloudflare Workers | Auth, rate limiting, prompt construction, story seeds, AI provider forwarding |
 | **Story text** | OpenAI GPT-4o-mini | Generates personalized Turkish story in JSON format |
 | **Story audio** | Google Gemini Flash TTS (`gemini-2.5-flash-tts`) | TTS narration with Turkish voice models |
 | **Subscriptions** | StoreKit 2 | Monthly/yearly auto-renewable via Apple |
 | **Data sync** | SwiftData (local-first) | Optional CloudKit for cross-device sync |
 
 **Key architectural decisions:**
-- iOS app owns ALL prompt logic (`PromptOrchestrator`, `StorySeeds`). Worker is a pure proxy.
+- Cloudflare Worker owns all prompt logic (`prompts.ts`, `themes.ts`, `storySeeds.ts`). iOS sends structured data (`child_name`, `age_group`, `themes`). Prompts updatable via `wrangler deploy`.
 - Audio singletons (`AudioPlayerService`, `MixerEngine`) survive navigation and tab switches.
 - Opacity-based tab system preserves all NavigationStack states.
 - Generated audio cached locally — replays cost $0.
@@ -32,11 +32,12 @@
 ## 3. Core Features
 
 ### Story Generation Engine
-- `PromptOrchestrator` assembles system + user messages with safety guardrails
-- 24 themes in 5 categories (9 free, 15 premium)
-- 41 randomized places, 40 randomized side characters ensure variety
-- One theme randomly selected per story — keeps prompts focused
+- Worker builds system + user prompts from structured iOS input (`edge/src/prompts.ts`)
+- 24 themes in 5 categories (9 free, 15 premium), theme hints in `edge/src/themes.ts`
+- ~40 randomized places, ~40 side characters, plus plot hooks, family threads, objects (`edge/src/storySeeds.ts`)
+- One theme randomly selected per story by the worker — keeps prompts focused
 - Age-appropriate language calibration (2–4, 5–7, 8+)
+- Prompts updatable via `wrangler deploy` without App Store release
 
 ### Audio & Sleep
 - 8 AI narrator voices (2 free, 6 premium) via Google Gemini Flash TTS
@@ -47,7 +48,7 @@
 - Sleep timer (15/30 min)
 
 ### Safety
-- No violence, fear, death, or inappropriate content (enforced in system prompt)
+- No violence, fear, death, or inappropriate content (enforced in worker system prompt, `edge/src/prompts.ts`)
 - Content-safe at every moment — Turkish children's standards
 - Parental gate for premium purchases
 - API keys never on device

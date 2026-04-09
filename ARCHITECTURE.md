@@ -3,8 +3,8 @@
 ## Overview
 
 - **Client:** SwiftUI + SwiftData, iOS 17+. iPhone and iPad only.
-- **Prompt logic:** Fully owned by the iOS app (`PromptOrchestrator`, `StorySeeds`). The app builds the complete `messages` array for OpenAI.
-- **Edge proxy:** Cloudflare Worker (`edge/`) is a stateless proxy holding API keys. It forwards requests and returns responses without modifying prompts.
+- **Prompt logic:** Owned by the Cloudflare Worker (`edge/src/prompts.ts`, `themes.ts`, `storySeeds.ts`). The iOS app sends structured data (child name, age group, selected themes); the worker builds prompts, samples seeds, and forwards to OpenAI.
+- **Edge worker:** Cloudflare Worker (`edge/`) handles auth, rate limiting, prompt construction, and AI provider forwarding. API keys never leave the worker.
 - **Audio:** Story playback via singleton `AudioPlayerService` (`AVAudioPlayer` + `MPNowPlayingInfoCenter`); white noise via singleton `MixerEngine` (one looped `AVAudioPlayer` per `MixerSound`). Both survive navigation and tab switches.
 - **Monetization:** StoreKit 2 auto-renewable subscriptions (monthly/yearly). `SubscriptionManager` tracks entitlements and `storiesGeneratedCount` for freemium gating.
 - **Version:** 1.2 (deployment target iOS 17.0)
@@ -18,11 +18,11 @@
 | Theme | `Theme/` | `ThemeManager`, `DreamscapePalette`, `DesignTokens`, `Typography` |
 | Models | `Models/`, `Models/Enums/` | `Story`, `ChildProfile`, `AppSyncState`, `StoryBentoTheme`, `StoryThemeCategory`, `StoryGenre` |
 | Data | `Data/` | `ChildProfileManager`, `AppSyncPersistence`, `SwiftDataRepository` |
-| Services | `Services/` | `AudioPlayerService`, `MixerEngine`, `SubscriptionManager`, `StoryService`, `PromptOrchestrator`, `StorySeeds` |
+| Services | `Services/` | `AudioPlayerService`, `MixerEngine`, `SubscriptionManager`, `StoryService`, `PromptOrchestrator` |
 | Live Activity | `Services/LiveActivity/` | `PlaybackSessionSync`, `PlaybackLiveActivityManager`, `PlaybackWidgetStore` |
 | Screens | `Views/Dashboard`, `Library`, `Player`, `Mixer`, `Onboarding`, `Settings`, `Components` | |
 | Widget | `MasalAmcaWidget/` | `NowPlayingWidget`, `StoryPlaybackLiveActivityWidget` |
-| Edge proxy | `edge/` | Cloudflare Worker: stateless proxy with auth + rate limiting |
+| Edge worker | `edge/` | Cloudflare Worker: auth, rate limiting, prompt builder, OpenAI + Gemini TTS |
 
 ## Story generation flow
 
@@ -31,36 +31,39 @@
 │                                                                        │
 │  1. User taps "Masal Üret" → HomeView.generateStory()                 │
 │  2. PromptOrchestrator.storyRequest(from: profile)                     │
-│     ├── StoryBentoTheme.randomForGeneration(from: selectedThemes)      │
-│     ├── StorySeeds.randomPlaces(count: 1-2)        [41 options]        │
-│     ├── StorySeeds.randomSideCharacters(count: 1-2) [40 options]       │
-│     ├── buildSystemPrompt()  ← safety, TTS, format, diversity rules    │
-│     └── buildUserMessage()   ← child name, age, theme, places, chars   │
-│  3. StoryGenerateRequestDTO { messages: [system, user] }               │
-│  4. StoryService → POST /v1/story (with messages array)                │
+│     ├── StoryPreferences.load(for: profile) → bentoThemes              │
+│     ├── Map theme rawValues                                            │
+│     └── Map age group string                                           │
+│  3. StoryRequestDTO { child_name, age_group, themes }                  │
+│  4. StoryService → POST /v1/story (structured data)                    │
 │                                                                        │
 └────────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
-┌─ Cloudflare Worker (pure proxy) ──────────────────────────────────────┐
+┌─ Cloudflare Worker (prompt builder + proxy) ─────────────────────────┐
 │                                                                        │
 │  5. Validate auth (Bearer token)                                       │
 │  6. Rate limit check (CF Workers binding, per IP)                      │
-│  7. Forward messages[] to OpenAI GPT-4o-mini                           │
-│     └── response_format: json_object, temperature: 0.7                 │
-│  8. Parse response: { title, body (string[]), genre }                  │
-│  9. Join body[] with "\n\n" → single string                            │
-│ 10. Return { title, body, genre, word_count, model }                   │
+│  7. Pick one random theme from themes[] (themes.ts)                    │
+│  8. Sample story seeds: place, character, plot, family, object         │
+│     └── ~40 places, ~40 characters, 18 plots, 18 family, 18 objects   │
+│  9. Build system prompt (safety, format, diversity rules) (prompts.ts) │
+│ 10. Build user message (child name, age, theme, seeds)                 │
+│ 11. Forward built messages[] to OpenAI GPT-4o-mini                     │
+│     └── response_format: json_object, temperature: 0.9                 │
+│ 12. Parse response: { title, body (string or array), genre }           │
+│ 13. Join body[] with "\n\n" → single string                            │
+│ 14. Return { title, body, genre, word_count, model, request_id }       │
 │                                                                        │
 └────────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─ iOS App (continued) ─────────────────────────────────────────────────┐
 │                                                                        │
-│ 11. StoryService → POST /v1/tts (text + voice_id)                     │
+│ 15. StoryService → POST /v1/tts (text + voice_id)                     │
 │     └── Worker forwards to Google Gemini Flash TTS → audio/mpeg       │
-│ 12. Story saved to SwiftData, audio cached to Documents                │
-│ 13. If user on home tab → auto-open player, stop white noise           │
+│ 16. Story saved to SwiftData, audio cached to Documents                │
+│ 17. If user on home tab → auto-open player, stop white noise           │
 │     If user on other tab → show toast "Masal hazır!"                   │
 │                                                                        │
 └────────────────────────────────────────────────────────────────────────┘
@@ -111,7 +114,7 @@ MasalAmcaApp (@State)
 
 `ThemeCategoryPicker` (reusable accordion view) is used in both Onboarding and Story Settings.
 
-For generation, `PromptOrchestrator` selects ONE random theme from the user's selected set. The LLM receives a single theme — never multiple.
+Theme `rawValue` strings are the shared contract between iOS (UI, premium gating) and the worker (prompt building, hint selection). For generation, the worker picks ONE random theme from the app's selected set. The LLM receives a single theme — never multiple.
 
 ## Environment injection
 
@@ -131,16 +134,14 @@ For generation, `PromptOrchestrator` selects ONE random theme from the user's se
 Swift types in `Services/PromptOrchestrator.swift`:
 
 ```swift
-struct StoryGenerateRequestDTO: Codable, Sendable {
-    var messages: [Message]
-    struct Message: Codable, Sendable {
-        var role: String   // "system" or "user"
-        var content: String
-    }
+struct StoryRequestDTO: Codable, Sendable {
+    var childName: String    // "child_name"
+    var ageGroup: String     // "age_group"
+    var themes: [String]     // theme rawValues
 }
 ```
 
-The Worker receives `{ messages: [...] }` and forwards to OpenAI. Response: `StoryGenerateResponseDTO` with `title`, `body`, `genre`, `wordCount`, `model`.
+The Worker receives `{ child_name, age_group, themes }`, builds prompts, calls OpenAI, and returns `{ title, body, genre, word_count, model, request_id }`. Response: `StoryGenerateResponseDTO` with `title`, `body`, `genre`, `wordCount`, `model`.
 
 ## Subscription model
 

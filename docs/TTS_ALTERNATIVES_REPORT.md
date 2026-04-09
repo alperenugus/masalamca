@@ -23,7 +23,7 @@
 
 ---
 
-## 2. Baseline: ElevenLabs (current stack)
+## 2. Baseline: ElevenLabs (previous stack)
 
 | Aspect | Notes |
 |--------|--------|

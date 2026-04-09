@@ -49,7 +49,7 @@ Use this when configuring a new machine or shipping a build.
 
 ## Edge Proxy (Cloudflare Worker)
 
-The Worker is a **pure proxy** — it does NOT build prompts or hold story logic. The iOS app sends the complete `messages` array.
+The Worker owns all prompt logic (system prompt, user prompt template, story seeds, theme hints). The iOS app sends structured data `{ child_name, age_group, themes }` to `/v1/story`.
 
 1. **Install tooling**
    ```bash
@@ -74,12 +74,13 @@ The Worker is a **pure proxy** — it does NOT build prompts or hold story logic
    ```
 
 5. **Story generation pipeline**
-   The Worker receives the full `{ messages: [...] }` from the iOS app and forwards to OpenAI. It parses the response, joins `body[]` array into a string, and returns `{ title, body, genre, word_count, model }`.
+   The Worker receives `{ child_name, age_group, themes }` from the iOS app, picks a random theme, samples story seeds (places, characters, plot hooks, family threads, objects), builds system + user prompts, and forwards to OpenAI. It parses the response, joins `body[]` array into a string, and returns `{ title, body, genre, word_count, model }`.
 
-   Prompt logic lives entirely in the iOS app:
-   - `PromptOrchestrator.swift` — builds system + user messages
-   - `StorySeeds.swift` — 41 places, 40 side characters, randomized per request
-   - `StoryPreferences.swift` — 24 themes in 5 categories via `StoryThemeCategory`
+   Worker source files:
+   - `src/prompts.ts` — system prompt, user prompt template, age group mapping
+   - `src/themes.ts` — 24 theme definitions with Turkish hints
+   - `src/storySeeds.ts` — ~40 places, ~40 characters, plot hooks, family threads, objects
+   - `src/googleAuth.ts` — Google Cloud OAuth2 (service account JWT)
 
    TTS uses **Google Gemini Flash TTS** (`gemini-2.5-flash-tts`) via the Cloud Text-to-Speech API.
 
