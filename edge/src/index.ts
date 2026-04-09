@@ -27,7 +27,7 @@ interface TTSRequest {
   output_format: string;
 }
 
-const ELEVEN_TTS_MODEL = "eleven_multilingual_v2";
+const ELEVEN_TTS_MODEL = "eleven_flash_v2_5";
 
 function wordCount(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;
