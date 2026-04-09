@@ -60,11 +60,47 @@ const VALID_AGE_GROUPS: ReadonlySet<string> = new Set([
   "eight_plus",
 ]);
 
+/**
+ * App Store builds before Gemini TTS sent ElevenLabs `voice_id` strings (see
+ * `StoryPreferences` at commit 1137338). Google expects Gemini speaker names.
+ * @see MasalAmca/Models/StoryPreferences.swift NarratorChoice (historical IDs)
+ */
+const LEGACY_ELEVENLABS_TO_GEMINI: Readonly<Record<string, string>> = {
+  // Info.plist `ElevenLabsVoiceID` — Yumuşak Bulut (default female)
+  oPC5I9GKjMReiaM29gjY: "Achernar",
+  NfwyWIJnRR1RrYnStGUG: "Algieba", // Bilge Dede
+  mF7tIc9VLrznhGooGjaT: "Alnilam", // Yakamoz
+  LYfSi2g3Frvxg50fRl91: "Aoede", // Ihlamur
+  LCHGt3rsPMP50Vs28amI: "Iapetus", // Çam Fısıltısı
+  ywzrmJ3AgYiLqAeZAGrq: "Erinome", // Lavanta
+  j9K9HnBcmgA6xNWqjlX0: "Fenrir", // Rüzgar
+  bqaNYmxFgK1TN7CL95PZ: "Sulafat", // Gelincik
+};
+
+const GEMINI_SPEAKER_NAMES: ReadonlySet<string> = new Set([
+  "Achernar",
+  "Algieba",
+  "Alnilam",
+  "Aoede",
+  "Iapetus",
+  "Erinome",
+  "Fenrir",
+  "Sulafat",
+]);
+
 // ─── Utilities ───────────────────────────────────────────────────────
 
 function resolveGeminiVoice(voiceId: string | undefined, env: Env): string {
   const id = (voiceId ?? "").trim();
-  if (id && id !== "default") return id;
+  if (!id || id === "default") {
+    return env.GOOGLE_TTS_VOICE_NAME?.trim() || "Achernar";
+  }
+  const mapped = LEGACY_ELEVENLABS_TO_GEMINI[id];
+  if (mapped) return mapped;
+  if (GEMINI_SPEAKER_NAMES.has(id)) return id;
+  console.log(
+    `[tts] unknown voice_id=${id.slice(0, 36)}; fallback to Achernar or GOOGLE_TTS_VOICE_NAME`,
+  );
   return env.GOOGLE_TTS_VOICE_NAME?.trim() || "Achernar";
 }
 
