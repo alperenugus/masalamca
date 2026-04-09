@@ -1,5 +1,35 @@
 # Masal Amca — Progress Ledger
 
+## 2026-04-09 — v1.2 Documentation & Architecture Update
+
+### Architecture changes
+- **Pure proxy architecture**: Worker rewritten as stateless proxy. All prompt logic (system prompt, theme selection, seed randomization) moved to iOS app (`PromptOrchestrator`, `StorySeeds`).
+- **Theme category system**: 24 themes organized into 5 categories (`StoryThemeCategory`) — Macera & Keşif, Doğa & Hayvanlar, Hayal Dünyası, Günlük Hayat, Değerler Eğitimi. `ThemeCategoryPicker` accordion component reused in Onboarding and Story Settings.
+- **Expanded content variety**: 41 randomized places, 40 side characters in `StorySeeds.swift`. One theme randomly selected per generation.
+- **TTS model**: Switched to ElevenLabs Flash v2.5 (`eleven_flash_v2_5`) — 50% cost savings over Multilingual v2 with acceptable Turkish quality.
+- **Messages-based API**: iOS sends `{ messages: [system, user] }` to Worker; Worker forwards to OpenAI and joins `body[]` array into string.
+
+### Bug fixes
+- **Story/audio mismatch after generation**: Fixed audio from previous story playing when new story opens. `StoryPlayerView` now verifies both story ID and title match before skipping audio reload.
+- **Conditional post-generation behavior**: If user stays on home tab during generation, story auto-plays. If user switches tabs, only a toast is shown — no unwanted tab navigation.
+- **White noise premium skip**: Next/previous buttons in `WhiteNoisePlayerView` now automatically skip past premium sounds for free users instead of showing parental gate.
+
+### New features
+- **9 value education themes**: Dürüstlük, Doğruluk, Sevgi, Çalışkanlık, Saygı, Cömertlik, Adalet, Sorumluluk, Yardımseverlik.
+- **Category-based theme UI**: Expandable accordion with per-category "select all" and theme count badges.
+
+### Documentation
+- Created `MasalAmca.md` — business overview, features, architecture summary.
+- Created `docs/FINANCIAL_ANALYSIS.md` — detailed cost model, break-even analysis, plan comparison.
+- Updated `AGENTS.md` — new rules for prompt ownership, post-generation behavior, premium skip.
+- Updated `ARCHITECTURE.md` — full story generation flow diagram, theme system, cost model reference.
+- Updated `DEVELOPER_SETUP.md` — pure proxy setup, Flash v2.5 model, 24 themes.
+- Updated `edge/README.md` — pure proxy architecture, messages-based API, endpoint docs.
+- Updated `docs/API_USAGE_REPORT.md` — corrected architecture, Flash v2.5 pricing.
+- Updated `Project Wiki: Masal Amca.md` — current feature set and financials.
+
+---
+
 ## 2026-04-08 — v1.1 Release
 
 ### Bug fixes

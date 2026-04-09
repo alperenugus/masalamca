@@ -28,15 +28,16 @@ Use this when configuring a new machine or shipping a build.
    - In [App Store Connect](https://appstoreconnect.apple.com), create subscription products:
      - `alperenugus.MasalAmca.premium.monthly`
      - `alperenugus.MasalAmca.premium.yearly`
-   - **Introductory offer / trial:** Paywall copy is driven from `Product.subscription?.introductoryOffer`. Configure in App Store Connect.
+   - **Introductory offer / trial:** 3-day free trial. Paywall copy is driven from `Product.subscription?.introductoryOffer`. Configure in App Store Connect.
    - **Local testing:** Create a StoreKit Configuration File (`.storekit`) in Xcode with the same product IDs. Set the scheme's **Run → Options → StoreKit Configuration** to that file.
    - **Sandbox:** Sign in with a sandbox Apple ID under **Settings → Developer**.
 
 7. **Subscription model**
    | Tier | Limit | Gates |
    |------|-------|-------|
-   | Free | 2 stories lifetime | 3 white noise sounds, 2 narrators |
-   | Premium | 2 stories/day | All 15 themes, 6 sounds, 8 narrators, background music |
+   | Free | 2 stories lifetime | 3 white noise sounds, 2 narrators, 9 themes |
+   | Premium | 2 stories/day | All 24 themes (5 categories), 6 sounds, 8 narrators, background music |
+   | Trial | 3 days | Full premium |
 
 8. **Legal links**
    Set in `Info.plist`: `TermsOfUseURL`, `PrivacyPolicyURL`. Paywall shows tappable links per Guideline 3.1.2(c).
@@ -48,6 +49,8 @@ Use this when configuring a new machine or shipping a build.
 
 ## Edge Proxy (Cloudflare Worker)
 
+The Worker is a **pure proxy** — it does NOT build prompts or hold story logic. The iOS app sends the complete `messages` array.
+
 1. **Install tooling**
    ```bash
    cd edge && npm install
@@ -56,26 +59,30 @@ Use this when configuring a new machine or shipping a build.
 
 2. **Provider API keys (never in the iOS app)**
    - **OpenAI**: API key with billing enabled (GPT-4o-mini)
-   - **ElevenLabs**: API key + Turkish voice IDs (multilingual_v2 model)
+   - **ElevenLabs**: API key + Turkish voice IDs (Flash v2.5 model)
 
 3. **Worker secrets**
    ```bash
    wrangler secret put OPENAI_API_KEY
    wrangler secret put ELEVENLABS_API_KEY
-   wrangler secret put ELEVENLABS_VOICE_ID    # default voice
-   wrangler secret put PROXY_AUTH_TOKEN        # shared with iOS app
+   wrangler secret put PROXY_AUTH_TOKEN
+   wrangler secret put ELEVENLABS_VOICE_ID
    ```
 
 4. **Deploy**
    ```bash
-   wrangler deploy
+   npx wrangler deploy
    ```
 
 5. **Story generation pipeline**
-   - System prompt: age-appropriate Turkish, TTS-optimized punctuation, JSON output
-   - `storySeeds.ts`: random place, side character, plot hook, family thread, object — injected each request for variety
-   - Word count enforcement: `lengthWordRange()` per target length, padding if LLM undershoots
-   - Model: `gpt-4o-mini` with `temperature: 0.6`
+   The Worker receives the full `{ messages: [...] }` from the iOS app and forwards to OpenAI. It parses the response, joins `body[]` array into a string, and returns `{ title, body, genre, word_count, model }`.
+
+   Prompt logic lives entirely in the iOS app:
+   - `PromptOrchestrator.swift` — builds system + user messages
+   - `StorySeeds.swift` — 41 places, 40 side characters, randomized per request
+   - `StoryPreferences.swift` — 24 themes in 5 categories via `StoryThemeCategory`
+
+   TTS uses **ElevenLabs Flash v2.5** (`eleven_flash_v2_5`).
 
 ---
 
@@ -96,8 +103,8 @@ Use this when configuring a new machine or shipping a build.
 ## Audio Architecture
 
 - **Audio session**: `.playback` category, no `.mixWithOthers` (enables lock screen Now Playing card). Multiple AVAudioPlayers in the same process play concurrently regardless.
-- **AudioPlayerService**: Singleton at app level. Owns story playback, Now Playing metadata, remote commands (play/pause/next/prev), playlist tracking. Survives navigation and tab switches.
-- **MixerEngine**: Singleton at app level. Owns white noise playback, focused sound tracking, skip logic with subscription checks. Takes over Now Playing when no story is active. `solo()` stops story playback.
+- **AudioPlayerService**: Singleton at app level. Owns story playback, Now Playing metadata, remote commands (play/pause/next/prev), playlist tracking. Survives navigation and tab switches. Verifies audio-story identity (both ID and title must match).
+- **MixerEngine**: Singleton at app level. Owns white noise playback, focused sound tracking, skip logic with subscription checks. Takes over Now Playing when no story is active. `solo()` stops story playback. Skip automatically bypasses premium sounds for free users.
 
 ---
 

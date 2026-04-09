@@ -1,64 +1,111 @@
-Application Name: Masal Amca
+# Masal Amca — Project Wiki
 
-Project Wiki: AI-Powered Personalized Bedtime Story & White Noise Companion
-Important Note on Localization: While this documentation is in English, the App UI, Onboarding, and all generated AI Content (Text & Audio) will be 100% in Turkish to serve the target demographic.
+**AI-Powered Personalized Turkish Bedtime Stories & White Noise Companion**
 
-1. Executive Summary
-Vision: A premium iOS application that generates hyper-personalized, pedagogically safe bedtime stories in Turkish, combined with a customizable white noise mixer to establish healthy sleep routines for children.
+> While this documentation is in English, all app UI, onboarding, and generated AI content (text & audio) are 100% in Turkish.
 
-Target Audience: Turkish-speaking parents with children aged 2-9 who are looking for engaging, screen-free bedtime routines.
+## 1. Executive Summary
 
-Core Value Proposition: Replacing static audiobooks with dynamic, on-demand stories where the child is the hero, backed by a native iOS experience that requires no external backend accounts.
+**Vision:** A premium iOS app that generates personalized, safe bedtime stories in Turkish for children, combined with a white noise mixer for healthy sleep routines.
 
-2. Technical Architecture (BaaS / Apple Ecosystem)
-By eliminating a custom backend, the app relies entirely on Apple's native frameworks and direct API integrations.
+**Target audience:** Turkish-speaking parents with children aged 2–9 who want engaging, screen-free bedtime routines.
 
-Frontend & UI: SwiftUI. Utilizing native components for smooth animations, audio player controls, and an Apple-standard user experience.
+**Core value proposition:** Zero screen time required — AI creates a unique story where the child is the hero, narrated with natural-sounding voices. No static audiobooks, no repeated content.
 
-Local Storage: SwiftData / CoreData. Used to store user profiles (child's name, age, interests), generated story texts, and local app settings.
+## 2. Technical Architecture
 
-Cloud Sync: Apple CloudKit. Allows seamless synchronization of stories and profiles across a parent's devices (e.g., iPhone to iPad) using their existing Apple ID. No separate login required.
+| Layer | Technology | Role |
+|-------|-----------|------|
+| **iOS app** | SwiftUI + SwiftData, iOS 17+ | UI, audio playback, prompt building, local storage |
+| **Edge proxy** | Cloudflare Workers | Stateless proxy holding API keys, auth + rate limiting |
+| **Story text** | OpenAI GPT-4o-mini | Generates personalized Turkish story in JSON format |
+| **Story audio** | ElevenLabs Flash v2.5 | TTS narration with Turkish voice models |
+| **Subscriptions** | StoreKit 2 | Monthly/yearly auto-renewable via Apple |
+| **Data sync** | SwiftData (local-first) | Optional CloudKit for cross-device sync |
 
-AI Integrations (Client-Side API Calls):
+**Key architectural decisions:**
+- iOS app owns ALL prompt logic (`PromptOrchestrator`, `StorySeeds`). Worker is a pure proxy.
+- Audio singletons (`AudioPlayerService`, `MixerEngine`) survive navigation and tab switches.
+- Opacity-based tab system preserves all NavigationStack states.
+- Generated audio cached locally — replays cost $0.
 
-Text Generation Engine: Direct API calls to OpenAI (GPT-4o-mini) or Anthropic (Claude 3.5 Haiku) using strict system prompts to generate the Turkish story text based on SwiftData profile inputs.
+## 3. Core Features
 
-Voice Generation (TTS): Direct API calls to ElevenLabs. The generated text is sent to ElevenLabs to stream or download high-quality Turkish audio.
+### Story Generation Engine
+- `PromptOrchestrator` assembles system + user messages with safety guardrails
+- 24 themes in 5 categories (9 free, 15 premium)
+- 41 randomized places, 40 randomized side characters ensure variety
+- One theme randomly selected per story — keeps prompts focused
+- Age-appropriate language calibration (2–4, 5–7, 8+)
 
-Security Note: Because calling APIs directly from the client exposes API keys, we will implement a lightweight serverless edge function (e.g., Cloudflare Workers or Apple's server-side environment if applicable) purely as a secure proxy to hide the API keys, or use strict API key budget limits/obfuscation if doing a pure MVP.
+### Audio & Sleep
+- 8 AI narrator voices (2 free, 6 premium) via ElevenLabs
+- 6 white noise sounds: rain, ocean, wind, fireplace, shush, fan
+- Background playback with lock screen Now Playing controls
+- Mini player bar for persistent audio access
+- Optional low-volume white noise layered under story narration
+- Sleep timer (15/30 min)
 
-3. Core Features (MVP)
-Dynamic Onboarding (Turkish): Collecting the child's data (name, gender, age, favorite animals, current interests, or behavioral goals like "sharing").
+### Safety
+- No violence, fear, death, or inappropriate content (enforced in system prompt)
+- Content-safe at every moment — Turkish children's standards
+- Parental gate for premium purchases
+- API keys never on device
 
-AI Story Engine: A prompt orchestrator that takes the onboarding variables and requests a unique, age-appropriate, non-violent story.
+## 4. Market Position
 
-High-Fidelity Audio (ElevenLabs): Converting the text to speech using a warm, engaging Turkish voice model.
+**Global context:** Apps like Oscar and Bedtime AI prove demand for personalized AI stories. Sleep apps like White Noise Baby have massive downloads for audio loops.
 
-White Noise Mixer: A native audio player featuring layered, continuous loops (e.g., Rain + Womb sounds + Fan) that can play independently or fade in after a story concludes.
+**Turkish market gap:** Existing Turkish apps (Masalcı etc.) offer static, pre-recorded audio. No dominant local app combines AI personalization + ElevenLabs-quality Turkish narration + white noise mixer in one iOS experience.
 
-Offline Library: Once an audio file is generated via ElevenLabs, it is cached locally in the app's document directory so the parent can replay favorite stories without incurring additional API costs or requiring an internet connection.
+**Differentiators:**
+- Zero screen time (audio-only consumption)
+- Child is the hero of every story
+- Turkish-first (not a translation)
+- White noise + story in one app
 
-4. Market Research & Competitive Landscape
-Global Leaders: Apps like Oscar and Bedtime AI prove the demand for personalized AI stories. They focus heavily on illustrations and text.
+## 5. Subscription Model
 
-Sleep/White Noise Leaders: Apps like White Noise Baby have massive downloads simply for playing static loops.
+| | Free | Premium |
+|--|------|---------|
+| Stories | 2 lifetime | 2/day |
+| Themes | 9 | 24 (5 categories) |
+| Narrators | 2 | 8 |
+| White noise | 3 | 6 |
+| Background music | No | Yes |
+| **Price** | $0 | $9.99/mo or $99.99/yr |
+| **Free trial** | — | 3 days |
 
-The Gap in the Turkish Market: Existing Turkish apps (like Masalcı) offer static, pre-recorded audio. There is no dominant local app that natively combines Agentic AI Personalization, ElevenLabs-quality Turkish Audio, and a White Noise Mixer into a single, cohesive iOS experience.
+Revenue after Apple 15% commission: $8.49/mo (monthly), $7.08/mo (yearly).
 
-5. Financials & Monetization Strategy
-Since you are paying for API usage per generation, a subscription model is necessary to ensure sustainable profit margins.
+## 6. Financial Model
 
-Estimated Unit Economics (Per Story):
+### Per-Story Cost (Flash v2.5)
+- OpenAI: ~$0.001
+- ElevenLabs: ~$0.42
+- **Total: ~$0.42/story**
 
-LLM Text (OpenAI/Claude): ~$0.002 - $0.005
+### Break-Even
+- Per-user: ~20 stories/month to stay profitable on Pro plan
+- Subscriber count: ~13 subscribers on Pro plan, ~35 on Scale yearly
 
-ElevenLabs TTS (approx. 500 words/3 mins): ~$0.05 - $0.09 (Pricing depends on tier, but ElevenLabs is a premium cost).
+### Recommended Plan Progression
+| Subscribers | ElevenLabs Plan |
+|-------------|----------------|
+| 0–34 | Pro ($99/mo) |
+| 35–50+ | Scale yearly ($275/mo) |
+| 100+ | Scale or Business |
 
-Strategy: Caching audio locally is critical. If a child listens to the same generated story 5 nights in a row, you only pay the API cost once.
+### Projection (50 subscribers, average usage, Scale yearly)
+- Revenue: $424.50/mo
+- Costs: $276/mo
+- **Net profit: ~$148.50/mo ($1,782/yr)**
 
-Subscription Model (Freemium):
+Full analysis: [docs/FINANCIAL_ANALYSIS.md](docs/FINANCIAL_ANALYSIS.md)
 
-Free Tier: 2 free generated stories upon downloading, plus access to 3 basic white noise sounds.
+## 7. App Store
 
-Premium Subscription (Monthly/Yearly via Apple In-App Purchases): Unlimited (or high daily limit) story generations, full access to the white noise library, custom voice selection, and CloudKit cross-device syncing.
-
+- **App Store URL:** https://apps.apple.com/app/id6761391879
+- **Terms:** https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+- **Keywords:** masal,uyku masalı,çocuk,ebeveyn,uyku,hikaye,beyaz gürültü,yağmur,rutin,bebek,rüya
+- **Version:** 1.2
