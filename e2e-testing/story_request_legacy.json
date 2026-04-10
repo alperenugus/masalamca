@@ -1,1 +1,0 @@
-{"messages":[{"role":"system","content":"Sen çocuklar için masallar yazan bir yazarsın. JSON formatında yanıt ver: {\"title\": \"...\", \"body\": \"...\", \"genre\": \"...\"}"},{"role":"user","content":"5 yaşındaki Zeynep için uyku öncesi kısa bir uzay masalı yaz."}]}

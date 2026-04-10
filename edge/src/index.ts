@@ -32,11 +32,6 @@ interface StoryRequest {
   themes: string[];
 }
 
-/** Legacy format from app v1.2 — iOS sent pre-built messages. */
-interface LegacyStoryRequest {
-  messages: { role: string; content: string }[];
-}
-
 interface TTSRequest {
   text: string;
   voice_id: string;
@@ -60,48 +55,15 @@ const VALID_AGE_GROUPS: ReadonlySet<string> = new Set([
   "eight_plus",
 ]);
 
-/**
- * App Store builds before Gemini TTS sent ElevenLabs `voice_id` strings (see
- * `StoryPreferences` at commit 1137338). Google expects Gemini speaker names.
- * @see MasalAmca/Models/StoryPreferences.swift NarratorChoice (historical IDs)
- */
-const LEGACY_ELEVENLABS_TO_GEMINI: Readonly<Record<string, string>> = {
-  // Info.plist `ElevenLabsVoiceID` — Yumuşak Bulut (default female)
-  oPC5I9GKjMReiaM29gjY: "Achernar",
-  NfwyWIJnRR1RrYnStGUG: "Algieba", // Bilge Dede
-  mF7tIc9VLrznhGooGjaT: "Alnilam", // Yakamoz
-  LYfSi2g3Frvxg50fRl91: "Aoede", // Ihlamur
-  LCHGt3rsPMP50Vs28amI: "Iapetus", // Çam Fısıltısı
-  ywzrmJ3AgYiLqAeZAGrq: "Erinome", // Lavanta
-  j9K9HnBcmgA6xNWqjlX0: "Fenrir", // Rüzgar
-  bqaNYmxFgK1TN7CL95PZ: "Sulafat", // Gelincik
-};
-
-const GEMINI_SPEAKER_NAMES: ReadonlySet<string> = new Set([
-  "Achernar",
-  "Algieba",
-  "Alnilam",
-  "Aoede",
-  "Iapetus",
-  "Erinome",
-  "Fenrir",
-  "Sulafat",
-]);
-
 // ─── Utilities ───────────────────────────────────────────────────────
 
+/** iOS sends Gemini Flash TTS speaker short names as `voice_id` (e.g. Achernar). */
 function resolveGeminiVoice(voiceId: string | undefined, env: Env): string {
   const id = (voiceId ?? "").trim();
   if (!id || id === "default") {
     return env.GOOGLE_TTS_VOICE_NAME?.trim() || "Achernar";
   }
-  const mapped = LEGACY_ELEVENLABS_TO_GEMINI[id];
-  if (mapped) return mapped;
-  if (GEMINI_SPEAKER_NAMES.has(id)) return id;
-  console.log(
-    `[tts] unknown voice_id=${id.slice(0, 36)}; fallback to Achernar or GOOGLE_TTS_VOICE_NAME`,
-  );
-  return env.GOOGLE_TTS_VOICE_NAME?.trim() || "Achernar";
+  return id;
 }
 
 function wordCount(text: string): number {
@@ -205,28 +167,13 @@ export default {
 // ─── Story generation ────────────────────────────────────────────────
 
 async function handleStory(request: Request, env: Env): Promise<Response> {
-  let raw: unknown;
+  let body: StoryRequest;
   try {
-    raw = await request.json();
+    body = (await request.json()) as StoryRequest;
   } catch {
     return jsonResponse({ error: "invalid_json" }, 400);
   }
 
-  const body = raw as Record<string, unknown>;
-
-  // TODO(cleanup): Remove legacy path once all users are on app v1.3+.
-  // See /TODO_REMOVE_LEGACY_STORY_PATH.md for details.
-  if (Array.isArray(body.messages) && body.messages.length > 0) {
-    return handleStoryLegacy(body as unknown as LegacyStoryRequest, env);
-  }
-
-  return handleStoryV2(body as unknown as StoryRequest, env);
-}
-
-/**
- * New path (app v1.3+): iOS sends structured data, worker builds prompts.
- */
-async function handleStoryV2(body: StoryRequest, env: Env): Promise<Response> {
   const startedAt = Date.now();
   const reqID = crypto.randomUUID();
 
@@ -256,29 +203,10 @@ async function handleStoryV2(body: StoryRequest, env: Env): Promise<Response> {
   ];
 
   console.log(
-    `[story ${reqID}] v2 theme=${theme.rawValue} age=${body.age_group} started`,
+    `[story ${reqID}] theme=${theme.rawValue} age=${body.age_group} started`,
   );
 
   return forwardToOpenAI(messages, reqID, startedAt, env);
-}
-
-/**
- * Legacy path (app v1.2): iOS sent pre-built messages array.
- * Remove this once all users have upgraded to v1.3+.
- */
-async function handleStoryLegacy(body: LegacyStoryRequest, env: Env): Promise<Response> {
-  const startedAt = Date.now();
-  const reqID = crypto.randomUUID();
-
-  if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
-    return jsonResponse({ error: "missing_messages" }, 400);
-  }
-
-  console.log(
-    `[story ${reqID}] legacy messages=${body.messages.length} started`,
-  );
-
-  return forwardToOpenAI(body.messages, reqID, startedAt, env);
 }
 
 async function forwardToOpenAI(
