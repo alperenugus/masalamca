@@ -75,6 +75,7 @@ Before any architecture work, ask these iOS-specific questions:
 
 ### Design
 - Does the user have a design reference, color palette, or brand guidelines?
+- **Does the user have Google Stitch designs, Figma files, or wireframes?** Request these before any UI sprint — agents produce dramatically better UI with visual references.
 - How many theme modes? (Light / Dark / OLED Night-Shift is the gold standard)
 - One-handed use priority? (Bottom sheets, thumb-reachable controls)
 - Haptic feedback strategy?
@@ -90,6 +91,8 @@ Before any architecture work, ask these iOS-specific questions:
 - App Store, TestFlight, Enterprise?
 - In-App Purchase or subscription model?
 - Apple Developer account already set up?
+- **Is this a Made for Kids app?** (Requires parental gates for commerce and external links)
+- **Does the app consume paid APIs?** (LLM, TTS, image generation — financial analysis needed before committing to a provider)
 
 ---
 
@@ -305,13 +308,16 @@ Build these reusable components BEFORE any feature UI:
 
 | Epic | Name | Contents |
 |---|---|---|
-| 1 | **Foundation** | Project scaffold, theme system, reusable components, data models, CI |
+| 1 | **Foundation** | Project scaffold, theme system, reusable components, data models, CI, `AGENTS.md`, `AppName.md` |
 | 2 | **Data Layer** | SwiftData models, repository pattern, CloudKit setup |
-| 3 | **Notifications** | Local notifications, remote push, action categories |
-| 4 | **Core UI** | Onboarding, main navigation, primary feature screens |
-| 5 | **Apple Ecosystem** | Siri Intents, Live Activities, Widgets, watchOS |
-| 6 | **Advanced Features** | Charts, media, search, analytics |
-| 7 | **Security & Export** | Biometrics, PDF export, data protection |
+| 3 | **Core UI** | Onboarding (with parental gate if kids app), main navigation, primary feature screens, loading/waiting UX |
+| 4 | **Audio** (if applicable) | Centralized audio service singleton, lock screen integration, mini player, background playback |
+| 5 | **Monetization** | Subscription manager, paywall, premium feature indicators, parental gate for commerce |
+| 6 | **Notifications** | Local notifications, remote push, action categories |
+| 7 | **Apple Ecosystem** | Siri Intents, Live Activities, Widgets, watchOS |
+| 8 | **Edge Proxy** (if API-dependent) | Cloudflare Worker, server-side prompt/logic ownership, E2E test suite |
+| 9 | **Advanced Features** | Charts, media, search, analytics |
+| 10 | **Security & Export** | Biometrics, PDF export, data protection |
 
 **Wave 0 (Foundation + Data) blocks everything.** Don't start UI until models are rock-solid.
 
@@ -466,9 +472,16 @@ Tests from previous sprints must not break. If they do, fix them before committi
 - [ ] CloudKit container provisioned and tested on device
 - [ ] Biometric auth works on device
 - [ ] Background audio works when locked
+- [ ] Lock screen Now Playing card with play/pause/skip works
 - [ ] Siri shortcuts indexed after first launch
 - [ ] PDF export generates valid document
 - [ ] All 3 theme modes look correct on device
+- [ ] Parental gates tested (commerce + external links) — if kids app
+- [ ] Premium indicators visible on all locked content
+- [ ] Paywall shows correct pricing, trial period, and legal links
+- [ ] Edge proxy deployed and reachable from device
+- [ ] E2E test suite passes against production proxy
+- [ ] Financial analysis reviewed and cost model acceptable
 
 ---
 
@@ -526,13 +539,170 @@ Show Siri command examples during onboarding so users discover voice features ea
 
 | Gate | When | What Human Must Do |
 |---|---|---|
+| Design Documents | Before Phase 1 | Provide Google Stitch / Figma / wireframes / brand guidelines |
 | Architecture Approval | After Phase 1 | Review and approve design |
+| Financial Analysis | Before committing to paid APIs | Review provider comparison, approve cost model |
 | CloudKit Container | Before sync testing | Create container in Apple Developer portal |
 | UI Review | After first UI sprint | Review on physical device |
 | watchOS Target | Before watch sprint | Add watchOS target in Xcode |
 | App Store Listing | Before release | Create listing, screenshots, privacy label |
+| Made for Kids Declaration | Before release (if kids app) | Enable in App Store Connect, verify parental gates |
 | TestFlight | Before release | Distribute to beta testers |
 
 ---
 
 *This document is the distilled wisdom of building a complete iOS app from zero to feature-complete with AI agents. Every rule exists because violating it caused a real bug, crash, or visual defect.*
+
+---
+
+## APPENDIX E: LESSONS FROM PRODUCTION — iOS-SPECIFIC
+
+> Distilled from shipping Masal Amca (Turkish children's bedtime story app) to the App Store. Every item here prevented or caused a real production issue.
+
+### E.1 — Centralized Audio Architecture
+
+If the app plays any audio (stories, music, white noise, podcasts), establish the audio architecture on day one:
+
+**Singleton services as `@State` on the App struct:**
+```swift
+@main struct MyApp: App {
+    @State private var audioPlayer = AudioPlayerService()
+    @State private var mixer = MixerEngine()
+}
+```
+
+**Rules:**
+- **Never create new instances** of audio services. Pass them via `.environment()`.
+- **Never call `stop()` or `pause()` from `onDisappear`** — use `onChange` of state bindings instead. Views disappear during navigation; audio shouldn't stop.
+- **Configure `AVAudioSession` once** in `App.init()` as `.playback` (not `.ambient`, not `.soloAmbient`). Do NOT use `.mixWithOthers` — it prevents the lock screen Now Playing card from appearing.
+- **Audio session must be in `Info.plist`**: `UIBackgroundModes: audio`.
+- **Separate concerns**: One service for primary content (story narration), another for ambient/background (white noise mixer). They coordinate via flags (e.g., `storyIsActive`).
+
+**Lock screen integration (`MPNowPlayingInfoCenter` + `MPRemoteCommandCenter`):**
+- Wire play/pause/next/prev commands.
+- Update Now Playing info (title, artwork, duration, elapsed time) on every track change.
+- Playlist and skip logic must live on the service (survives view dismissal), not on the view.
+- When two audio services exist (narration + mixer), only one owns Now Playing at a time.
+
+**Mini player pattern:**
+- Global floating bar above the tab bar, visible when audio is active but the full player is not on screen.
+- Reads/writes the same presentation binding as the full player.
+- Shows current track info, playback controls, and tap-to-expand.
+
+### E.2 — Parental Gate for Made for Kids Apps
+
+Apple requires a parental gate before any commerce in Made for Kids apps. Implement two kinds:
+
+| Kind | When | UX |
+|------|------|-----|
+| **Commerce** | Before paywall, subscription purchase, restore | Math problem or text challenge |
+| **External link** | Before opening Safari (privacy policy, terms, support) | Same gate, different messaging |
+
+Present as a `.sheet()` with `.presentationDetents([.medium])`. On success, dismiss and show the paywall or open the link.
+
+### E.3 — Paywall Best Practices (StoreKit 2)
+
+**Paywall view must include:**
+- Feature comparison table (free vs premium)
+- Price with trial period clearly stated
+- Plan toggle (monthly / yearly) — default to yearly when available
+- Purchase button with loading state
+- Restore button
+- Legal links (EULA, privacy policy) behind parental gate
+- Handle all `Product.PurchaseResult` outcomes: `.success`, `.userCancelled`, `.pending` (Ask to Buy)
+
+**`SubscriptionManager` pattern:**
+- `@Observable @MainActor` class
+- Listen to `Transaction.updates` in a long-lived task; `finish()` verified transactions and refresh entitlements
+- `isPremium` derived from `Transaction.currentEntitlements`
+- Feature gates: `canUseSound(_:)`, `canUseNarrator(_:)`, `canGenerateStory(storiesCreatedTodayFromStore:)`
+- Free tier: lifetime quota (e.g., 2 stories ever); Premium: daily quota (e.g., 2/day)
+- `#if DEBUG` mock premium via UserDefaults for testing
+
+### E.4 — Premium Feature Indicators
+
+Users must instantly see what's free vs locked:
+- Show a **lock icon** or **"Premium" badge** on locked content (narrators, themes, sounds)
+- When a free user taps locked content, show the paywall (through parental gate for kids apps)
+- When skip/next buttons land on premium content, **auto-skip to the next free item** — never show a paywall from a skip action
+
+### E.5 — Engaging Generation/Loading UX
+
+When AI generates content and the user must wait (10–30+ seconds):
+- **Create a dedicated loading view** with animations (not a plain spinner). Example: `StoryGenerationLoadingView` with floating stars, progress text, child's name displayed.
+- **Show contextual info**: "Ali için bir uzay masalı yazılıyor..." (Writing a space story for Ali...)
+- **Handle navigation away**: If the user switches tabs during generation, show a toast when complete ("Masal hazır!") instead of force-navigating them back. Never auto-navigate across tabs.
+
+### E.6 — Tab Preservation with Opacity-Based ZStack
+
+SwiftUI's `TabView` destroys inactive tab content, losing `NavigationStack` state. Use an opacity-based `ZStack` instead:
+
+```swift
+ZStack {
+    ForEach(Tab.allCases) { tab in
+        tabContent(tab)
+            .opacity(selectedTab == tab ? 1 : 0)
+    }
+}
+```
+
+All tabs stay alive simultaneously. Navigation stacks, scroll positions, and in-progress forms survive tab switches. Audio never stops because views are never torn down.
+
+### E.7 — Edge Proxy for API Keys
+
+**Never ship API keys in the iOS app.** Use a Cloudflare Worker (or equivalent edge proxy):
+- App knows only the proxy URL (from `Info.plist`) and a shared auth token
+- Proxy holds OpenAI, Google Cloud, and other provider keys as secrets
+- Proxy handles auth, rate limiting, and request forwarding
+- If the proxy owns prompt construction (system prompt, seeds, themes), you can iterate on AI behavior via `wrangler deploy` without an App Store release
+
+**Server-side prompt ownership** is the single most impactful architectural decision for iteration speed in AI-powered apps.
+
+### E.8 — Design Documents & UI References
+
+**Before any UI sprint, ask the user for:**
+- Google Stitch designs, Figma files, or wireframes
+- Color palette or brand guidelines
+- Reference apps or competitor screenshots
+
+Agents produce dramatically better UI with visual references. Without them, expect 3x iteration cycles on aesthetics.
+
+### E.9 — Project Documentation for Agents
+
+Create these files at project start:
+
+| File | Purpose |
+|------|---------|
+| `AGENTS.md` or `.cursor/rules/` | Persistent agent context: architecture, critical rules, file map, singletons |
+| `.cursor/skills/` | Repeatable procedures: deploy, migrate, test |
+| `AppName.md` | Marketing-oriented overview (features, pricing, architecture) — agents use for context; you use for App Store copy |
+| `ARCHITECTURE.md` | Living technical architecture document |
+| `PROGRESS.md` | Append-only progress ledger |
+| `docs/FINANCIAL_ANALYSIS.md` | Cost modeling across providers |
+
+### E.10 — Backward Compatibility During API Migrations
+
+When migrating providers (e.g., ElevenLabs → Google Gemini TTS):
+1. **Auto-detect request format** on the server (check distinguishing fields)
+2. **Map legacy values** server-side (e.g., old voice IDs → new speaker names)
+3. **Deploy server first**, supporting both old and new formats
+4. **Leave a `TODO_REMOVE_LEGACY.md`** with what/when/how to clean up
+5. **Remove legacy code** once analytics confirm <1% old-client usage
+
+### E.11 — E2E Testing for Server Flows
+
+Create `e2e-testing/` with:
+- Mock JSON payloads simulating real app requests
+- `run_e2e.sh` that sends payloads to local server (`wrangler dev`) and validates responses
+- `output/` directory (gitignored) for generated JSON and audio files
+- Run before every `wrangler deploy`
+
+### E.12 — Financial Analysis Before Choosing Providers
+
+Compare at least 3–4 providers for every paid API (LLM, TTS, image generation):
+- Per-unit cost at your expected usage
+- Quality for your specific use case (language, style, latency)
+- Free tiers and scaling discounts
+- Save as `docs/FINANCIAL_ANALYSIS.md`; revisit quarterly
+
+**Real example:** ElevenLabs TTS cost ~$0.42/story. Google Gemini Flash TTS costs ~$0.10–0.12/story. A 75% reduction discovered after V1 shipped — should have been analyzed before.

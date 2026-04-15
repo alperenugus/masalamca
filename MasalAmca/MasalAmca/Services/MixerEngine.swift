@@ -14,6 +14,9 @@ enum MixerSound: String, CaseIterable, Identifiable, Sendable {
     case wind
     case shush
     case fan
+    case forest
+    case train
+    case womb
 
     var id: String { rawValue }
 
@@ -27,6 +30,9 @@ enum MixerSound: String, CaseIterable, Identifiable, Sendable {
         case .wind: "Rüzgar"
         case .shush: "Anne Şşş"
         case .fan: "Vantilatör"
+        case .forest: "Orman"
+        case .train: "Tren"
+        case .womb: "Anne Karnı"
         }
     }
 
@@ -38,6 +44,9 @@ enum MixerSound: String, CaseIterable, Identifiable, Sendable {
         case .wind: "wind"
         case .shush: "mouth"
         case .fan: "fanblades.fill"
+        case .forest: "tree.fill"
+        case .train: "tram.fill"
+        case .womb: "heart.circle.fill"
         }
     }
 
@@ -49,6 +58,9 @@ enum MixerSound: String, CaseIterable, Identifiable, Sendable {
         case .wind: "Hafif Esinti"
         case .shush: "Sakinleştirici"
         case .fan: "Sabit Akış"
+        case .forest: "Yeşil Orman"
+        case .train: "Rayların Üzerinde"
+        case .womb: "Yumuşak ve Sıcak"
         }
     }
 

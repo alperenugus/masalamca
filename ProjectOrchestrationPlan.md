@@ -449,3 +449,118 @@ Before declaring the project production-ready, the orchestrator must verify:
 - [ ] Docker images have health checks.
 - [ ] Startup script works for new developers (`./start.sh` on clean machine).
 - [ ] HITL gates are documented with step-by-step instructions.
+
+---
+
+## APPENDIX D: LESSONS FROM PRODUCTION — BEST PRACTICES
+
+> Distilled from shipping real apps with AI agents. Every item here was learned the hard way.
+
+### D.1 — Agent Context & Memory
+
+**Create `AGENTS.md` or `.cursor/rules/` files immediately.** Without persistent context, every new agent chat starts from zero. These files should contain:
+- Project overview (one paragraph)
+- Architecture decisions that are non-negotiable (singletons, navigation patterns, state ownership)
+- File organization map
+- Critical rules (things that will break the app if violated)
+- Key types and their responsibilities
+
+**Create `.cursor/skills/` files** for repeatable procedures (deploy workflow, migration steps, testing protocols). Agents execute these reliably when given a well-structured skill file.
+
+**Create an `AppName.md`** — a marketing-oriented project overview explaining the app's purpose, features, subscription model, architecture, and tech stack. This serves double duty: agents use it for context, and you use it for App Store copy, investor decks, and onboarding new collaborators.
+
+### D.2 — Design Documents
+
+**Always ask the user for design references first.** Before writing any UI code, ask:
+- Do you have Google Stitch designs, Figma files, or screenshots?
+- Do you have a color palette or brand guidelines?
+- Do you have reference apps or competitor screenshots?
+
+Agents produce dramatically better UI when given visual references. Without them, you'll spend 3x the time iterating on aesthetics.
+
+### D.3 — Financial Analysis for External APIs
+
+**Before committing to any paid API provider, produce a comparative financial analysis.** This is especially critical for per-request APIs like LLMs and TTS. The analysis should cover:
+
+| What to compare | Why |
+|-----------------|-----|
+| At least 3–4 providers (e.g., OpenAI, Anthropic, Google, AWS, Azure) | Pricing varies 5–10x between providers for similar quality |
+| Per-unit cost (e.g., $/story, $/1K characters, $/1K tokens) | Aggregate monthly cost depends on usage patterns |
+| Free tier / included quota | Some providers include generous free tiers |
+| Quality for your specific use case (language, style, latency) | Cheapest is worthless if quality is unacceptable |
+| Scaling path (plan tiers, volume discounts) | Cost at 100 users vs 10,000 users can change the winner |
+
+Save this as `docs/FINANCIAL_ANALYSIS.md`. Revisit it quarterly — pricing changes frequently.
+
+**Lesson learned:** Masal Amca initially used ElevenLabs for TTS (~$0.42/story). Migrating to Google Gemini Flash TTS reduced costs to ~$0.10–0.12/story — a 75% reduction. This analysis should have been done before V1 shipped.
+
+### D.4 — Edge Proxy Pattern for API Key Security
+
+**Never ship API keys in client apps.** Use an edge proxy (Cloudflare Workers, Vercel Edge Functions, AWS Lambda@Edge) that:
+1. Holds all provider API keys as secrets
+2. Authenticates client requests (Bearer token, device attestation)
+3. Rate limits per client IP or device
+4. Forwards requests to providers and returns responses
+5. Logs usage without exposing PII
+
+**Move business logic to the proxy when possible.** If the proxy owns prompt construction, theme selection, or other logic, you can iterate without App Store releases. The client sends structured data; the proxy builds the full request. This is the single most impactful architectural decision for iteration speed.
+
+### D.5 — Server-Side Logic Ownership (Iterate Without Releases)
+
+Anything you might want to change frequently should live on the server, not in the client:
+- **LLM prompts** (system prompt, user prompt template, safety rules)
+- **Content variety** (story seeds, theme hints, randomization logic)
+- **Model selection** (switch from GPT-4o-mini to Claude without a client update)
+- **TTS style prompts** (voice style, pacing, emotion)
+- **Feature flags** (enable/disable features server-side)
+
+The client should send **structured data** (name, preferences, selections) and receive **final output**. The server decides how to produce that output.
+
+### D.6 — Backward Compatibility During Migrations
+
+When changing API contracts (e.g., migrating from one provider to another, restructuring request formats):
+
+1. **Auto-detect request format** on the server. Check for distinguishing fields (e.g., `child_name` = new format, `messages` = old format). Route to the appropriate handler.
+2. **Map legacy values** on the server. If old clients send provider-specific IDs (e.g., ElevenLabs voice UUIDs), map them to new equivalents (e.g., Gemini speaker names) in the proxy.
+3. **Deploy server first, then client.** The server handles both formats; old clients keep working; new clients use the new format.
+4. **Leave a TODO file** (e.g., `TODO_REMOVE_LEGACY.md`) documenting what to remove, when (e.g., 4–6 weeks after new client ships), and how. Reference it in code comments.
+5. **Remove legacy code** once analytics confirm negligible old-client usage.
+
+### D.7 — E2E Testing for API Flows
+
+For any app with a server component, create an `e2e-testing/` folder with:
+- **Mock payloads** (JSON files simulating real client requests)
+- **A shell script** (`run_e2e.sh`) that sends payloads to the local server and validates responses
+- **Output directory** (gitignored) for generated responses (JSON, audio, images)
+
+This catches breaking changes before deployment. Run it before every `wrangler deploy` or server release.
+
+### D.8 — Engaging Loading/Waiting UX
+
+If the user must wait for something (AI generation, large file processing, server response):
+- **Never show a blank spinner.** Create a dedicated loading view with animations, tips, or progress indicators.
+- **Show contextual information** (e.g., "Your story is being written..." with the child's name and theme).
+- **Use progressive disclosure** — show partial results as they arrive if possible.
+- **Set expectations** — tell the user approximately how long it will take.
+- **Handle the "user left" case** — if the user navigates away during generation, show a toast when complete instead of force-navigating them back.
+
+### D.9 — Children's App Requirements (Made for Kids)
+
+Apps targeting children have additional requirements:
+- **Parental gate** before any commerce (subscription purchase, restore). Apple requires this for Made for Kids apps. Implement as a simple math problem or text-based challenge.
+- **Parental gate for external links** — any link leaving the app (privacy policy, terms, support) must go through a gate.
+- **No behavioral advertising, no analytics SDKs that track children.**
+- **AI disclosure** — if AI generates content, disclose this clearly.
+- **Content safety** — strict prompt guardrails (no violence, fear, death, inappropriate content). Enforce in the server-side system prompt, not just the client.
+- **Free tier must work without payment** — don't paywall the entire app. Offer a meaningful free experience.
+- **Strip premium selections for free users** — if onboarding lets users pick premium themes/features, sanitize selections before saving (remove premium picks, keep only free-tier items).
+
+### D.10 — Subscription & Paywall Patterns
+
+- **StoreKit 2** (iOS) or **Google Play Billing** (Android) for native subscriptions. RevenueCat is optional but useful for analytics, experiments, and cross-platform.
+- **Premium feature indicators**: Show a lock icon or "Premium" badge on locked content. Users should understand what's free vs paid at a glance.
+- **Paywall placement**: Show the paywall when users try to access premium content, not randomly. Include: feature comparison (free vs premium), price with trial period, restore button, legal links (EULA, privacy policy).
+- **Trial**: Offer a free trial (3–7 days). Show what they'll lose when it expires.
+- **Quota gating**: Track usage (e.g., stories generated) and gate on limits (lifetime for free, daily for premium). Persist counts reliably (UserDefaults + server sync).
+- **Skip premium content gracefully**: If a user hits "next" on premium-only content (e.g., narrator voices, sounds), auto-skip to the next free item. Never show a paywall from a skip/next button.
+
